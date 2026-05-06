@@ -50,22 +50,75 @@ function GithubTab({
         将每次提交的代码和笔记自动推送到你的 GitHub 仓库，方便多设备查阅和备份。
       </p>
 
-      {/* 步骤 1：创建 Token */}
+      {/* 步骤 1：创建仓库 */}
       <div className="bg-[#0D1117] border border-[#30363D] rounded-xl p-6 mb-6">
         <div className="flex items-center gap-2 mb-4">
           <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#2EA043] text-white text-xs font-bold shrink-0">
             1
           </span>
           <h3 className="text-base font-semibold text-white">
-            创建 GitHub Fine-grained Token（推荐）
+            创建 GitHub 同步仓库
+          </h3>
+        </div>
+
+        <div className="text-sm text-gray-300 space-y-2 mb-4 leading-relaxed">
+          <p>
+            你需要一个<strong>已经存在的</strong> GitHub 仓库来存放同步文件。推荐创建一个<strong>私有仓库</strong>，避免代码泄露。
+          </p>
+          <p>
+            如果还没有，点击这里创建：
+            <a
+              href="https://github.com/new"
+              target="_blank"
+              rel="noreferrer"
+              className="text-blue-400 hover:underline ml-1"
+            >
+              创建新仓库 ↗
+            </a>
+          </p>
+          <ul className="list-disc list-inside text-gray-400 space-y-1 ml-2">
+            <li>仓库名随意，比如 <code className="bg-[#161B22] px-1.5 py-0.5 rounded text-xs text-gray-300">algo-tracker-data</code></li>
+            <li>建议设为 <span className="text-gray-200 font-medium">Private</span>（私有）</li>
+            <li>不需要勾选 "Add a README file"（空仓库也可以）</li>
+          </ul>
+        </div>
+
+        <div className="bg-[#161B22] border border-[#30363D] rounded-lg p-4">
+          <label className="block text-sm font-medium text-gray-200 mb-2">
+            仓库全名
+          </label>
+          <div className="flex items-center gap-1.5">
+            <span className="text-gray-500 text-sm shrink-0">github.com/</span>
+            <input
+              type="text"
+              value={repo}
+              onChange={(e) => onRepoChange(e.target.value)}
+              placeholder="你的用户名/仓库名"
+              className="flex-1 bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2.5 text-sm text-gray-200 focus:outline-none focus:border-[#2EA043] placeholder:text-gray-600"
+            />
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            格式：<code className="bg-[#161B22] px-1.5 py-0.5 rounded text-xs text-gray-400">GitHub用户名/仓库名</code>，例如 <code className="bg-[#161B22] px-1.5 py-0.5 rounded text-xs text-gray-400">chen/algo-tracker-data</code>
+          </p>
+        </div>
+      </div>
+
+      {/* 步骤 2：创建 Token（收束到上述仓库） */}
+      <div className="bg-[#0D1117] border border-[#30363D] rounded-xl p-6 mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#2EA043] text-white text-xs font-bold shrink-0">
+            2
+          </span>
+          <h3 className="text-base font-semibold text-white">
+            创建 Token 并限定到上述仓库
           </h3>
         </div>
 
         <div className="bg-[#1A3A2A] border border-[#2EA043]/30 rounded-lg p-4 mb-4 text-sm text-gray-300 leading-relaxed">
           <p className="font-medium text-[#2EA043] mb-2">为什么推荐精细 Token？</p>
           <ul className="list-disc list-inside space-y-1 text-gray-400">
-            <li>权限可以限定到<strong className="text-gray-200">单个仓库</strong>，即使泄露也仅影响一个仓库</li>
-            <li>可以精确控制每个权限（只读 / 读写），不像 Classic Token 的 `repo` 权限能访问所有仓库</li>
+            <li>权限可以收束到<strong className="text-gray-200">步骤 1 创建的单个仓库</strong>，即使泄露也仅影响这一个仓库</li>
+            <li>可以精确控制每个权限（只读 / 读写），不像 Classic Token 的 `repo` 权限能访问你的所有仓库</li>
             <li>这是 GitHub 官方推荐的新标准</li>
           </ul>
         </div>
@@ -83,28 +136,25 @@ function GithubTab({
             </a>
           </li>
           <li>
-            在 <span className="text-gray-200 font-medium">Token name</span> 填入 <code className="bg-[#161B22] px-1.5 py-0.5 rounded text-xs text-gray-300">AlgoTracker</code>
+            <span className="text-gray-200 font-medium">Token name</span> 填入 <code className="bg-[#161B22] px-1.5 py-0.5 rounded text-xs text-gray-300">AlgoTracker</code>，<span className="text-gray-200 font-medium">Expiration</span> 选最长期限
           </li>
           <li>
-            在 <span className="text-gray-200 font-medium">Expiration</span> 选择过期时间（建议选最长的自定义期限）
+            <span className="text-gray-200 font-medium">Resource owner</span> 选择你的 GitHub 账号（即仓库所属账号）
           </li>
           <li>
-            在 <span className="text-gray-200 font-medium">Resource owner</span> 选择你的 GitHub 账号
+            <span className="text-gray-200 font-medium">Repository access</span> → 选择 <strong className="text-white">Only select repositories</strong>，在下拉框中选中<strong className="text-[#F85149]">步骤 1 创建的那个仓库</strong>
           </li>
           <li>
-            <span className="text-gray-200 font-medium">Repository access</span> → 选择 <strong className="text-white">Only select repositories</strong>，然后在下拉框中选中你准备用来同步的那个仓库
+            <span className="text-gray-200 font-medium">Permissions</span> → 只开 <strong className="text-[#F85149]">Contents: Read and write</strong>，其余全部保持默认的 "No access"
           </li>
+          <li>点击 <span className="text-gray-200 font-medium">Generate token</span></li>
           <li>
-            <span className="text-gray-200 font-medium">Permissions</span> → <strong className="text-[#F85149]">Contents: Read and write</strong>（其他全部保持默认的 "No access"）
-          </li>
-          <li>点击底部的 <span className="text-gray-200 font-medium">Generate token</span></li>
-          <li>
-            <strong className="text-[#F85149]">立即复制生成的 Token</strong>（以 <code className="bg-[#161B22] px-1.5 py-0.5 rounded text-xs text-gray-300">github_pat_</code> 开头），离开页面后将无法再次查看
+            <strong className="text-[#F85149]">立即复制生成的 Token</strong>（<code className="bg-[#161B22] px-1.5 py-0.5 rounded text-xs text-gray-300">github_pat_</code> 开头），离开页面后将无法再次查看
           </li>
         </ol>
 
         <p className="text-xs text-gray-500 mb-4">
-          如果你更习惯旧版，也可以使用{' '}
+          如果习惯旧版，也可以用{' '}
           <a href="https://github.com/settings/tokens/new" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">
             Classic Token
           </a>（勾选 `repo` 权限），两种都能用。
@@ -129,60 +179,7 @@ function GithubTab({
             />
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            Token 仅保存在你浏览器的本地存储中，不会上传到任何第三方服务器。
-          </p>
-        </div>
-      </div>
-
-      {/* 步骤 2：仓库 */}
-      <div className="bg-[#0D1117] border border-[#30363D] rounded-xl p-6 mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#2EA043] text-white text-xs font-bold shrink-0">
-            2
-          </span>
-          <h3 className="text-base font-semibold text-white">
-            准备 GitHub 仓库
-          </h3>
-        </div>
-
-        <div className="text-sm text-gray-300 space-y-2 mb-4 leading-relaxed">
-          <p>
-            你需要一个<strong>已经存在的</strong> GitHub 仓库来存放同步文件。推荐创建一个<strong>私有仓库</strong>。
-          </p>
-          <p>
-            如果还没有，点击这里创建：
-            <a
-              href="https://github.com/new"
-              target="_blank"
-              rel="noreferrer"
-              className="text-blue-400 hover:underline ml-1"
-            >
-              创建新仓库 ↗
-            </a>
-          </p>
-          <ul className="list-disc list-inside text-gray-400 space-y-1 ml-2">
-            <li>仓库名随意，比如 <code className="bg-[#161B22] px-1.5 py-0.5 rounded text-xs text-gray-300">algo-tracker-data</code></li>
-            <li>建议设为 <span className="text-gray-200 font-medium">Private</span>（私有），避免代码泄露</li>
-            <li>不需要勾选 "Add a README file"（空仓库或已有内容的仓库都可以）</li>
-          </ul>
-        </div>
-
-        <div className="bg-[#161B22] border border-[#30363D] rounded-lg p-4">
-          <label className="block text-sm font-medium text-gray-200 mb-2">
-            仓库全名
-          </label>
-          <div className="flex items-center gap-1.5">
-            <span className="text-gray-500 text-sm shrink-0">github.com/</span>
-            <input
-              type="text"
-              value={repo}
-              onChange={(e) => onRepoChange(e.target.value)}
-              placeholder="你的用户名/仓库名"
-              className="flex-1 bg-[#0D1117] border border-[#30363D] rounded-lg px-3 py-2.5 text-sm text-gray-200 focus:outline-none focus:border-[#2EA043] placeholder:text-gray-600"
-            />
-          </div>
-          <p className="text-xs text-gray-500 mt-2">
-            格式：<code className="bg-[#161B22] px-1.5 py-0.5 rounded text-xs text-gray-400">GitHub用户名/仓库名</code>，例如 <code className="bg-[#161B22] px-1.5 py-0.5 rounded text-xs text-gray-400">chen/algo-tracker-data</code>
+            Token 仅保存在你浏览器的本地存储中，不上传任何第三方服务器。
           </p>
         </div>
       </div>
