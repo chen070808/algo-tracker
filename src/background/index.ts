@@ -34,22 +34,45 @@ async function processSubmissionSave(submission: any, note?: string, mistakeTags
     else if (verdict === 'Runtime Error') verdict = 'RE';
     else if (verdict === 'Memory Limit Exceeded') verdict = 'MLE';
 
+    const codeUrl = submission.id
+      ? `https://leetcode.cn/problems/${submission.titleSlug}/submissions/${submission.id}/`
+      : '';
+
     await db.submissions.put({
       id: submissionId,
       problemId,
       timestamp: Date.now(),
       verdict,
-      language: submission.lang,
+      language: submission.lang || '',
+      runtimeStr: submission.runtime || '',
+      memoryStr: submission.memory || '',
+      code: submission.code || '',
+      codeUrl,
     });
   }
 
   // 3. 保存笔记和错因标签
-  if (note || (mistakeTags && mistakeTags.length > 0)) {
-    const existingNote = await db.notes.get(problemId);
+  const existingNote = await db.notes.get(problemId);
+  const mergedMistakeTags = mistakeTags?.length
+    ? mistakeTags
+    : existingNote?.mistakeTags || [];
+
+  let mdContent = note || existingNote?.markdownContent || '';
+  // 首次保存时，把代码附带进笔记
+  if (!note && !existingNote && submission.code) {
+    const lang = submission.lang || '';
+    mdContent = '```' + lang + '\n' + submission.code + '\n```\n';
+  }
+
+  if (
+    note ||
+    mdContent !== (existingNote?.markdownContent || '') ||
+    (mistakeTags && mistakeTags.length > 0)
+  ) {
     await db.notes.put({
       problemId,
-      markdownContent: note || existingNote?.markdownContent || '',
-      mistakeTags: mistakeTags || existingNote?.mistakeTags || [],
+      markdownContent: mdContent,
+      mistakeTags: mergedMistakeTags,
       lastUpdatedAt: Date.now(),
     });
   }

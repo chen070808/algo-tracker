@@ -10,13 +10,15 @@ export interface Problem {
 }
 
 export interface Submission {
-  id: string; // UUID
+  id: string;
   problemId: string;
   timestamp: number;
   verdict: 'AC' | 'WA' | 'TLE' | 'RE' | 'CE' | 'MLE' | string;
   language: string;
-  runtime?: number;
-  memory?: number;
+  runtimeStr?: string;
+  memoryStr?: string;
+  code?: string;
+  codeUrl?: string;
 }
 
 export interface SkillProfile {
