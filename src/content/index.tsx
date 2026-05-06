@@ -1,0 +1,348 @@
+/// <reference types="chrome"/>
+import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom/client';
+import '../popup/index.css';
+
+console.log('[AlgoTracker] Content script loaded at:', window.location.href);
+
+// ── 注入 MAIN world 检测脚本 ──
+// 通过 <script> 标签注入，使得脚本能访问页面的 Monaco 编辑器、
+// MutationObserver、History API 等，从而用 DOM 方式检测提交结果
+function injectInterceptor() {
+  if (document.getElementById('algo-tracker-interceptor')) return;
+  const script = document.createElement('script');
+  script.id = 'algo-tracker-interceptor';
+  script.src = chrome.runtime.getURL('src/content/inject.js');
+  script.onload = function () {
+    console.log('[AlgoTracker] MAIN world 检测脚本注入完成');
+  };
+  script.onerror = function () {
+    console.error('[AlgoTracker] MAIN world 检测脚本注入失败！');
+  };
+  (document.head || document.documentElement).appendChild(script);
+}
+
+injectInterceptor();
+
+// ── 类型定义 ──
+
+interface LeetCodeSubmission {
+  id: string;
+  status_display: string;
+  lang: string;
+  runtime: string;
+  memory: string;
+  titleSlug: string;
+  code?: string;
+}
+
+// ── 安全调用 background（处理扩展重载后 context 失效的情况）──
+
+function sendToBackground(type: string, payload: unknown) {
+  // 扩展 context 失效时（比如扩展被重载），chrome.runtime.id 为 undefined
+  if (!chrome?.runtime?.id) return Promise.resolve();
+  return chrome.runtime.sendMessage({ type, payload });
+}
+
+// ── 抽屉 UI 组件 ──
+
+const MISTAKE_TAGS = [
+  '思路卡壳',
+  '边界遗漏',
+  '粗心大意',
+  '算法未掌握',
+  '超时',
+  '空间超限',
+  '暂不清楚',
+];
+
+function Drawer({
+  submission,
+  forceOpen,
+}: {
+  submission: LeetCodeSubmission | null;
+  forceOpen?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [note, setNote] = useState('');
+  const [mistakeTags, setMistakeTags] = useState<string[]>([]);
+  const [saved, setSaved] = useState(false);
+
+  const isAC = submission?.status_display === 'Accepted';
+
+  useEffect(() => {
+    if (forceOpen) {
+      setIsOpen(true);
+    }
+  }, [submission, forceOpen]);
+
+  // 保存成功后 1.5s 自动关闭
+  useEffect(() => {
+    if (saved) {
+      const t = setTimeout(() => {
+        setIsOpen(false);
+        sessionStorage.removeItem('algoTracker_pendingSubmission');
+        setSaved(false);
+      }, 1500);
+      return () => clearTimeout(t);
+    }
+  }, [saved]);
+
+  const toggleTag = (tag: string) => {
+    setMistakeTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const handleSave = () => {
+    if (submission) {
+      sendToBackground('SAVE_SUBMISSION', { submission, note, mistakeTags });
+    }
+    setSaved(true);
+  };
+
+  const handleDismiss = () => {
+    // 仅保存提交记录，不写复盘
+    if (submission) {
+      sendToBackground('AUTO_SAVE_SUBMISSION', { submission });
+    }
+    setIsOpen(false);
+    sessionStorage.removeItem('algoTracker_pendingSubmission');
+  };
+
+  const verdictColor = isAC ? 'text-green-400' : 'text-red-400';
+  const verdictIcon = isAC ? '✅' : '❌';
+
+  if (!isOpen) {
+    return (
+      <button
+        onClick={() => setIsOpen(true)}
+        className="fixed bottom-4 right-4 bg-[#2EA043] text-white px-4 py-2 rounded-full shadow-lg z-[9999] hover:bg-green-600 transition-colors"
+      >
+        AlgoTracker 复盘
+      </button>
+    );
+  }
+
+  // 保存成功态
+  if (saved) {
+    return (
+      <div className="fixed top-0 right-0 h-full w-[400px] bg-[#0D1117] border-l border-[#30363D] shadow-2xl z-[9999] p-6 flex items-center justify-center text-gray-100 font-sans">
+        <div className="text-center">
+          <div className="text-4xl mb-4">📝</div>
+          <p className="text-lg font-semibold text-[#2EA043]">已保存</p>
+          <p className="text-sm text-gray-400 mt-2">
+            {mistakeTags.length > 0
+              ? '错题已加入复习计划'
+              : '提交记录已同步'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed top-0 right-0 h-full w-[400px] bg-[#0D1117] border-l border-[#30363D] shadow-2xl z-[9999] p-6 flex flex-col text-gray-100 font-sans overflow-y-auto">
+      {/* 标题栏 */}
+      <div className="flex justify-between items-center mb-5">
+        <div>
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <span>{verdictIcon}</span>
+            {isAC ? '通过了！' : '提交复盘'}
+          </h2>
+          {submission && (
+            <p className="text-xs text-gray-400 mt-1">
+              <span className={verdictColor}>{submission.status_display}</span>
+              {submission.runtime ? `  ·  ${submission.runtime}` : ''}
+              {submission.memory ? `  ·  ${submission.memory}` : ''}
+              {submission.lang ? `  ·  ${submission.lang}` : ''}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={handleDismiss}
+          className="text-gray-400 hover:text-white hover:bg-[#30363D] rounded-full w-8 h-8 flex items-center justify-center text-lg leading-none transition-colors"
+          title="关闭"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* 错因标签 —— 仅非 AC 时显示 */}
+      {!isAC && (
+        <div className="mb-4">
+          <label className="block text-sm text-gray-400 mb-2">
+            错因归类
+            <span className="text-gray-600 ml-1">选填，可多选</span>
+          </label>
+          <div className="flex gap-2 flex-wrap">
+            {MISTAKE_TAGS.map((tag) => {
+              const isUnsure = tag === '暂不清楚';
+              return (
+                <span
+                  key={tag}
+                  onClick={() => {
+                    if (isUnsure) {
+                      // 点"暂不清楚"时清除其他标签
+                      setMistakeTags((prev) =>
+                        prev.includes('暂不清楚') ? [] : ['暂不清楚']
+                      );
+                    } else {
+                      setMistakeTags((prev) =>
+                        prev.filter((t) => t !== '暂不清楚')
+                      );
+                      toggleTag(tag);
+                    }
+                  }}
+                  className={`px-3 py-1 border rounded-full text-xs cursor-pointer transition-colors ${
+                    mistakeTags.includes(tag)
+                      ? isUnsure
+                        ? 'bg-yellow-600 border-yellow-600 text-white'
+                        : 'bg-[#F85149]/30 border-[#F85149] text-[#F85149]'
+                      : isUnsure
+                        ? 'bg-[#161B22] border-yellow-700 text-yellow-500 hover:border-yellow-600'
+                        : 'bg-[#161B22] border-[#30363D] text-gray-400 hover:border-gray-500'
+                  }`}
+                >
+                  {tag}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 笔记 */}
+      <div className="flex-1 flex flex-col mb-4 min-h-[180px]">
+        <label className="block text-sm text-gray-400 mb-2">
+          {isAC ? '思路笔记' : '复盘笔记'}
+          <span className="text-gray-600 ml-1">选填</span>
+        </label>
+        <textarea
+          className="flex-1 w-full bg-[#161B22] border border-[#30363D] rounded-lg p-3 text-sm text-gray-200 focus:outline-none focus:border-[#2EA043] resize-none"
+          placeholder={
+            isAC
+              ? '解法思路、关键优化、值得记住的写法...'
+              : '哪里卡住了？正确思路是什么？下次怎么避免？'
+          }
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+      </div>
+
+      {/* 操作按钮 */}
+      <div className="space-y-2">
+        <button
+          className="w-full bg-[#2EA043] text-white font-bold py-3 rounded-lg hover:bg-green-600 transition-colors"
+          onClick={handleSave}
+        >
+          保存{isAC ? '笔记' : '复盘'}并加入复习计划
+        </button>
+        {!isAC && (
+          <button
+            className="w-full bg-transparent border border-[#30363D] text-gray-400 py-2 rounded-lg hover:border-gray-500 hover:text-gray-300 transition-colors text-sm"
+            onClick={handleDismiss}
+          >
+            仅保存记录，暂时跳过复盘
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── 全局状态 ──
+
+let currentSubmission: LeetCodeSubmission | null = null;
+let root: ReactDOM.Root | null = null;
+
+function renderDrawer(forceOpen = false) {
+  if (!root) return;
+  root.render(
+    <React.StrictMode>
+      <Drawer submission={currentSubmission} forceOpen={forceOpen} />
+    </React.StrictMode>
+  );
+}
+
+function saveViaBackground() {
+  sendToBackground('AUTO_SAVE_SUBMISSION', { submission: currentSubmission })
+    .then(() => { /* 静默成功 */ })
+    .catch(() => { /* context 失效，刷新页面即可恢复 */ });
+}
+
+// ── UI 初始化 ──
+
+function initUI() {
+  if (document.getElementById('algo-tracker-drawer-root')) return;
+  const container = document.createElement('div');
+  container.id = 'algo-tracker-drawer-root';
+  document.body.appendChild(container);
+  root = ReactDOM.createRoot(container);
+
+  // 检查是否有跨页面跳转遗留的提交数据
+  const pendingData = sessionStorage.getItem('algoTracker_pendingSubmission');
+  if (pendingData) {
+    try {
+      const parsed = JSON.parse(pendingData);
+      console.log(
+        '[AlgoTracker] 恢复跨页面遗留的提交数据:',
+        parsed
+      );
+      currentSubmission = parsed;
+      renderDrawer(true);
+    } catch (e) {
+      console.error('[AlgoTracker] 恢复遗留数据失败:', e);
+      renderDrawer();
+    }
+  } else {
+    renderDrawer();
+  }
+}
+
+// SPA 路由跳转后重新挂载 UI
+const observer = new MutationObserver(() => {
+  if (!document.getElementById('algo-tracker-drawer-root') && document.body) {
+    console.log('[AlgoTracker] SPA 路由变化，重建 UI');
+    initUI();
+  }
+});
+
+if (document.body) {
+  initUI();
+  observer.observe(document.body, { childList: true, subtree: true });
+} else {
+  document.addEventListener('DOMContentLoaded', () => {
+    initUI();
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
+}
+
+// ── 监听来自 MAIN world 的提交消息 ──
+
+window.addEventListener('message', (event) => {
+  if (
+    event.source !== window ||
+    !event.data ||
+    event.data.type !== 'ALGOTRACKER_SUBMISSION'
+  ) {
+    return;
+  }
+
+  console.log('[AlgoTracker] 收到提交数据:', event.data.data);
+  currentSubmission = event.data.data;
+
+  // 持久化到 sessionStorage，应对 SPA 路由跳转
+  sessionStorage.setItem(
+    'algoTracker_pendingSubmission',
+    JSON.stringify(currentSubmission)
+  );
+
+  // 始终自动保存提交记录到 IndexedDB
+  saveViaBackground();
+
+  // AC 静默保存，不弹窗；非 AC 弹出复盘抽屉
+  if (currentSubmission.status_display !== 'Accepted') {
+    renderDrawer(true);
+  }
+});
