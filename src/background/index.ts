@@ -24,6 +24,28 @@ async function processSubmissionSave(submission: any, note?: string, mistakeTags
   const existingSub = await db.submissions.get(submissionId);
   let isNewSubmission = false;
 
+  // 无 ID 提交的二次去重：检查最近 30s 内同题目同结果的提交
+  if (!submission.id && !existingSub) {
+    // 必须用和存储一致的短名，否则永远匹配不到
+    let verdictNorm = submission.status_display;
+    if (verdictNorm === 'Accepted') verdictNorm = 'AC';
+    else if (verdictNorm === 'Wrong Answer') verdictNorm = 'WA';
+    else if (verdictNorm === 'Time Limit Exceeded') verdictNorm = 'TLE';
+    else if (verdictNorm === 'Compile Error') verdictNorm = 'CE';
+    else if (verdictNorm === 'Runtime Error') verdictNorm = 'RE';
+    else if (verdictNorm === 'Memory Limit Exceeded') verdictNorm = 'MLE';
+
+    const recentDup = await db.submissions
+      .where('problemId')
+      .equals(problemId)
+      .filter(s => s.verdict === verdictNorm && s.timestamp > Date.now() - 30000)
+      .first();
+    if (recentDup) {
+      console.log('[AlgoTracker] 跳过重复提交（30s 窗口去重）:', problemId);
+      return;
+    }
+  }
+
   if (!existingSub) {
     isNewSubmission = true;
     let verdict = submission.status_display;

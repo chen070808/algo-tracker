@@ -32,6 +32,46 @@ function utf8ToBase64(str: string): string {
 }
 
 // 核心同步函数
+// 验证 Token 和仓库连接是否有效
+export async function verifyConnection(token: string, repo: string): Promise<{ ok: boolean; error: string }> {
+  if (!token || !repo) {
+    return { ok: false, error: '请先填写 Token 和仓库名称' };
+  }
+
+  // 校验仓库名格式
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) {
+    return { ok: false, error: '仓库名格式不正确，应为 用户名/仓库名' };
+  }
+
+  try {
+    // 尝试读取仓库信息（验证 Token 有效且有权访问该仓库）
+    const res = await fetch(`https://api.github.com/repos/${repo}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    });
+
+    if (res.ok) {
+      return { ok: true, error: '' };
+    }
+
+    if (res.status === 401) {
+      return { ok: false, error: 'Token 无效或已过期，请重新生成' };
+    }
+    if (res.status === 404) {
+      return { ok: false, error: `仓库 "${repo}" 不存在或无访问权限。请先创建仓库，并确保 Token 有该仓库的读写权限` };
+    }
+    if (res.status === 403) {
+      return { ok: false, error: '访问被拒绝。请检查 Token 是否勾选了仓库读写权限（Contents: Read and write）' };
+    }
+
+    return { ok: false, error: `GitHub API 返回错误 (${res.status})，请稍后重试` };
+  } catch (e) {
+    return { ok: false, error: '网络连接失败，请检查网络后重试' };
+  }
+}
+
 export async function syncToGithub(
   problemSlug: string,
   code: string,
@@ -97,7 +137,7 @@ export async function syncToGithub(
       const getUrl = `https://api.github.com/repos/${config.repo}/contents/${file.path}`;
       const getRes = await fetch(getUrl, {
         headers: {
-          'Authorization': `token ${config.token}`,
+          'Authorization': `Bearer ${config.token}`,
           'Accept': 'application/vnd.github.v3+json'
         }
       });
@@ -112,7 +152,7 @@ export async function syncToGithub(
       const putRes = await fetch(putUrl, {
         method: 'PUT',
         headers: {
-          'Authorization': `token ${config.token}`,
+          'Authorization': `Bearer ${config.token}`,
           'Accept': 'application/vnd.github.v3+json',
           'Content-Type': 'application/json'
         },

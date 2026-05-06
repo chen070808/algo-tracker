@@ -177,6 +177,7 @@
 
   const processedKeys = {}; // key → timestamp
   const DEDUP_WINDOW_MS = 60000;
+  const DEDUP_STORAGE_PREFIX = '__at_dedup_';
 
   function getDedupKey(slug, verdict) {
     return slug + '::' + verdict;
@@ -184,9 +185,12 @@
 
   function isDuplicate(slug, verdict) {
     const key = getDedupKey(slug, verdict);
+    // Check in-memory cache
     const ts = processedKeys[key];
     if (ts && Date.now() - ts < DEDUP_WINDOW_MS) return true;
-    // Clean stale entries
+    // Check sessionStorage (survives tab switches)
+    if (sessionStorage.getItem(DEDUP_STORAGE_PREFIX + key)) return true;
+    // Clean stale in-memory entries
     for (const k of Object.keys(processedKeys)) {
       if (Date.now() - processedKeys[k] > DEDUP_WINDOW_MS) delete processedKeys[k];
     }
@@ -196,10 +200,22 @@
   function markProcessed(slug, verdict) {
     const key = getDedupKey(slug, verdict);
     processedKeys[key] = Date.now();
+    sessionStorage.setItem(DEDUP_STORAGE_PREFIX + key, '1');
     // Keep object bounded
     const keys = Object.keys(processedKeys);
     if (keys.length > 50) {
       for (let i = 0; i < 25; i++) delete processedKeys[keys[i]];
+    }
+  }
+
+  function clearDedupCache() {
+    // Clear in-memory
+    for (const k of Object.keys(processedKeys)) {
+      delete processedKeys[k];
+    }
+    // Clear sessionStorage dedup entries
+    for (const k of Object.keys(sessionStorage)) {
+      if (k.startsWith(DEDUP_STORAGE_PREFIX)) sessionStorage.removeItem(k);
     }
   }
 
@@ -352,7 +368,7 @@
           if (el && isSubmitButton(el)) {
             console.log('[AlgoTracker] 检测到 Submit 按钮点击');
             // Clear previous dedup cache so re-submission of same problem works
-            Object.keys(processedKeys).forEach(function(k) { delete processedKeys[k]; });
+            clearDedupCache();
             // Start polling (result will appear after judge queue)
             startPolling();
             return;
@@ -372,7 +388,7 @@
     function (e) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         console.log('[AlgoTracker] 检测到键盘快捷键提交');
-        Object.keys(processedKeys).forEach(function(k) { delete processedKeys[k]; });
+        clearDedupCache();
         startPolling();
       }
     },

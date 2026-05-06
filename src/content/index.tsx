@@ -102,10 +102,7 @@ function Drawer({
   };
 
   const handleDismiss = () => {
-    // 仅保存提交记录，不写复盘
-    if (submission) {
-      sendToBackground('AUTO_SAVE_SUBMISSION', { submission });
-    }
+    // 自动保存已在检测到提交时完成，此处仅关闭抽屉
     setIsOpen(false);
     sessionStorage.removeItem('algoTracker_pendingSubmission');
   };
