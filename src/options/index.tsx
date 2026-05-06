@@ -1,8 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import ReactDOM from 'react-dom/client';
-import { db } from '../lib/db';
+import { db, type Submission, type Problem, type SkillProfile } from '../lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { getGithubConfig, setGithubConfig, verifyConnection } from '../lib/github';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  PieChart, Pie, Cell,
+  AreaChart, Area,
+  ResponsiveContainer, ReferenceLine,
+} from 'recharts';
 import '../popup/index.css';
 
 // ── GitHub 同步配置面板 ──
@@ -305,8 +311,370 @@ function GithubTab({
   );
 }
 
+// ── 数据分析面板 ──
+
+const VERDICT_COLORS: Record<string, string> = {
+  AC: '#2EA043',
+  WA: '#F85149',
+  TLE: '#F0883E',
+  RE: '#D29922',
+  CE: '#8B949E',
+  MLE: '#A371F7',
+};
+
+const VERDICT_FALLBACK = '#484F58';
+
+const CHART_TOOLTIP = {
+  contentStyle: {
+    backgroundColor: '#161B22',
+    border: '1px solid #30363D',
+    borderRadius: '8px',
+    fontSize: '12px',
+    color: '#E6EDF3',
+  },
+};
+
+function AnalyticsTab({
+  submissions,
+  problems,
+  skillProfiles,
+}: {
+  submissions: Submission[];
+  problems: Problem[];
+  skillProfiles: SkillProfile[];
+}) {
+  // ── KPI 计算 ──
+  const kpi = useMemo(() => {
+    const total = submissions.length;
+    const ac = submissions.filter((s) => s.verdict === 'AC').length;
+    const acRate = total ? ((ac / total) * 100).toFixed(1) : '0.0';
+    const solved = new Set(
+      submissions.filter((s) => s.verdict === 'AC').map((s) => s.problemId)
+    ).size;
+
+    const daySet = new Set<string>();
+    for (const s of submissions) {
+      daySet.add(new Date(s.timestamp).toISOString().slice(0, 10));
+    }
+    const sorted = [...daySet].sort().reverse();
+    let streak = 0;
+    if (sorted.length > 0) {
+      const today = new Date().toISOString().slice(0, 10);
+      const yest = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      if (sorted[0] === today || sorted[0] === yest) {
+        streak = 1;
+        for (let i = 1; i < sorted.length; i++) {
+          const diff =
+            (new Date(sorted[i - 1]).getTime() - new Date(sorted[i]).getTime()) /
+            86400000;
+          if (Math.abs(diff - 1) < 0.1) streak++;
+          else break;
+        }
+      }
+    }
+    return { total, ac, acRate, solved, streak };
+  }, [submissions]);
+
+  // ── 每日活跃数据 ──
+  const dailyData = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const s of submissions) {
+      const d = new Date(s.timestamp).toISOString().slice(0, 10);
+      map.set(d, (map.get(d) || 0) + 1);
+    }
+    return [...map.entries()]
+      .map(([date, count]) => ({ date: date.slice(5), count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [submissions]);
+
+  // ── 技能评分 ──
+  const skillData = useMemo(() => {
+    const global = skillProfiles.find((p) => p.tag === 'global');
+    const baseline = global ? Math.round(global.rating) : 1500;
+    return skillProfiles
+      .filter((p) => p.tag !== 'global')
+      .map((p) => ({
+        name: p.tag,
+        rating: Math.round(p.rating),
+        acRate: p.totalAttempted ? ((p.totalAC / p.totalAttempted) * 100).toFixed(0) : '0',
+        baseline,
+      }))
+      .sort((a, b) => b.rating - a.rating);
+  }, [skillProfiles]);
+
+  // ── 结果分布 ──
+  const verdictData = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const s of submissions) {
+      map.set(s.verdict, (map.get(s.verdict) || 0) + 1);
+    }
+    return [...map.entries()]
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [submissions]);
+
+  // ── 每周趋势 ──
+  const weeklyData = useMemo(() => {
+    const map = new Map<string, { total: number; ac: number }>();
+    for (const s of submissions) {
+      const d = new Date(s.timestamp);
+      const dow = d.getDay();
+      const mon = new Date(d);
+      mon.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+      const key = mon.toISOString().slice(0, 10);
+      const e = map.get(key) || { total: 0, ac: 0 };
+      e.total++;
+      if (s.verdict === 'AC') e.ac++;
+      map.set(key, e);
+    }
+    return [...map.entries()]
+      .map(([week, d]) => ({ week: week.slice(5), '总提交': d.total, '通过': d.ac }))
+      .sort((a, b) => a.week.localeCompare(b.week));
+  }, [submissions]);
+
+  // ── 难度分布 ──
+  const diffData = useMemo(() => {
+    const probMap = new Map<string, Problem>();
+    for (const p of problems) probMap.set(p.id, p);
+    const attempted = new Set<string>();
+    const solved = new Set<string>();
+    for (const s of submissions) {
+      attempted.add(s.problemId);
+      if (s.verdict === 'AC') solved.add(s.problemId);
+    }
+    const buckets = [
+      { label: '<1200', min: 0, max: 1199 },
+      { label: '1200-1600', min: 1200, max: 1600 },
+      { label: '1600-2000', min: 1600, max: 2000 },
+      { label: '2000-2400', min: 2000, max: 2400 },
+      { label: '2400+', min: 2400, max: Infinity },
+    ];
+    return buckets.map((b) => {
+      let att = 0,
+        slv = 0;
+      for (const id of attempted) {
+        const p = probMap.get(id);
+        if (p && p.rating >= b.min && p.rating < b.max) {
+          att++;
+          if (solved.has(id)) slv++;
+        }
+      }
+      return { label: b.label, '尝试': att, '通过': slv };
+    });
+  }, [submissions, problems]);
+
+  // ── 空状态 ──
+  if (submissions.length === 0) {
+    return (
+      <div className="text-center py-20">
+        <div className="text-5xl mb-4">📊</div>
+        <p className="text-gray-400 text-lg mb-2">还没有提交记录</p>
+        <p className="text-gray-500 text-sm">
+          去力扣提交一道题，数据分析将自动生成
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-semibold text-white">数据分析</h2>
+
+      {/* KPI 卡片 */}
+      <div className="grid grid-cols-4 gap-4">
+        {[
+          { label: '总提交', value: String(kpi.total) },
+          { label: 'AC 率', value: `${kpi.acRate}%`, accent: true },
+          { label: '已解题目', value: String(kpi.solved) },
+          { label: '连续天数', value: `${kpi.streak} 天` },
+        ].map((card) => (
+          <div
+            key={card.label}
+            className="bg-[#0D1117] border border-[#30363D] rounded-xl p-4 text-center"
+          >
+            <p className="text-xs text-gray-500 mb-1">{card.label}</p>
+            <p
+              className={`text-2xl font-bold ${
+                card.accent ? 'text-[#2EA043]' : 'text-white'
+              }`}
+            >
+              {card.value}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* 图表行 1：每日活跃 + 结果分布 */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* 每日活跃 */}
+        <div className="bg-[#0D1117] border border-[#30363D] rounded-xl p-4">
+          <h3 className="text-sm font-medium text-gray-300 mb-3">每日提交</h3>
+          {dailyData.length <= 1 ? (
+            <p className="text-gray-500 text-sm py-8 text-center">提交更多天后生成趋势</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={dailyData}>
+                <CartesianGrid stroke="#30363D" strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fill: '#8B949E', fontSize: 10 }}
+                  interval="preserveStartEnd"
+                />
+                <YAxis allowDecimals={false} tick={{ fill: '#8B949E', fontSize: 10 }} />
+                <Tooltip {...CHART_TOOLTIP} />
+                <Bar dataKey="count" fill="#2EA043" radius={[3, 3, 0, 0]} name="提交数" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* 结果分布 */}
+        <div className="bg-[#0D1117] border border-[#30363D] rounded-xl p-4">
+          <h3 className="text-sm font-medium text-gray-300 mb-3">结果分布</h3>
+          <ResponsiveContainer width="100%" height={240}>
+            <PieChart>
+              <Pie
+                data={verdictData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                innerRadius={45}
+                outerRadius={85}
+                paddingAngle={2}
+              >
+                {verdictData.map((entry) => (
+                  <Cell
+                    key={entry.name}
+                    fill={VERDICT_COLORS[entry.name] || VERDICT_FALLBACK}
+                  />
+                ))}
+              </Pie>
+              <Tooltip
+                {...CHART_TOOLTIP}
+                formatter={(value) => [value, '提交数']}
+              />
+              <Legend
+                wrapperStyle={{ fontSize: 11, color: '#8B949E' }}
+                iconType="circle"
+                iconSize={8}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* 技能评分 */}
+      <div className="bg-[#0D1117] border border-[#30363D] rounded-xl p-4">
+        <h3 className="text-sm font-medium text-gray-300 mb-3">技能评分</h3>
+        {skillData.length === 0 ? (
+          <p className="text-gray-500 text-sm py-8 text-center">提交题目以生成能力画像</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={Math.max(180, skillData.length * 44)}>
+            <BarChart data={skillData} layout="vertical" margin={{ left: 10 }}>
+              <CartesianGrid stroke="#30363D" strokeDasharray="3 3" horizontal={false} />
+              <XAxis
+                type="number"
+                domain={[1200, 'dataMax + 100']}
+                tick={{ fill: '#8B949E', fontSize: 10 }}
+              />
+              <YAxis
+                type="category"
+                dataKey="name"
+                tick={{ fill: '#8B949E', fontSize: 12 }}
+                width={50}
+              />
+              <Tooltip
+                {...CHART_TOOLTIP}
+                formatter={(_value, _name, props) => [
+                  `${props.payload.rating} (AC ${props.payload.acRate}%)`,
+                  'Rating',
+                ]}
+              />
+              <ReferenceLine
+                x={skillData[0]?.baseline ?? 1500}
+                stroke="#484F58"
+                strokeDasharray="4 4"
+                label={{
+                  value: '基线',
+                  fill: '#8B949E',
+                  fontSize: 10,
+                  position: 'insideTopRight',
+                }}
+              />
+              <Bar dataKey="rating" radius={[0, 3, 3, 0]}>
+                {skillData.map((entry) => (
+                  <Cell
+                    key={entry.name}
+                    fill={entry.rating >= entry.baseline ? '#2EA043' : '#F0883E'}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+
+      {/* 图表行 2：每周趋势 + 难度分布 */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* 每周趋势 */}
+        <div className="bg-[#0D1117] border border-[#30363D] rounded-xl p-4">
+          <h3 className="text-sm font-medium text-gray-300 mb-3">每周趋势</h3>
+          {weeklyData.length <= 1 ? (
+            <p className="text-gray-500 text-sm py-8 text-center">提交更多周后生成趋势</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={weeklyData}>
+                <CartesianGrid stroke="#30363D" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="week" tick={{ fill: '#8B949E', fontSize: 10 }} />
+                <YAxis allowDecimals={false} tick={{ fill: '#8B949E', fontSize: 10 }} />
+                <Tooltip {...CHART_TOOLTIP} />
+                <Legend wrapperStyle={{ fontSize: 11, color: '#8B949E' }} />
+                <Area
+                  type="monotone"
+                  dataKey="总提交"
+                  stroke="#484F58"
+                  fill="#484F58"
+                  fillOpacity={0.2}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="通过"
+                  stroke="#2EA043"
+                  fill="#2EA043"
+                  fillOpacity={0.35}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* 难度分布 */}
+        <div className="bg-[#0D1117] border border-[#30363D] rounded-xl p-4">
+          <h3 className="text-sm font-medium text-gray-300 mb-3">难度分布</h3>
+          {diffData.every((d) => d['尝试'] === 0) ? (
+            <p className="text-gray-500 text-sm py-8 text-center">暂无题目难度数据</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={diffData}>
+                <CartesianGrid stroke="#30363D" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="label" tick={{ fill: '#8B949E', fontSize: 10 }} />
+                <YAxis allowDecimals={false} tick={{ fill: '#8B949E', fontSize: 10 }} />
+                <Tooltip {...CHART_TOOLTIP} />
+                <Legend wrapperStyle={{ fontSize: 11, color: '#8B949E' }} />
+                <Bar dataKey="尝试" fill="#30363D" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="通过" fill="#2EA043" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function OptionsApp() {
-  const [activeTab, setActiveTab] = useState<'data' | 'github'>('data');
+  const [activeTab, setActiveTab] = useState<'data' | 'analytics' | 'github'>('data');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // ── GitHub 配置状态 ──
@@ -324,7 +692,7 @@ function OptionsApp() {
   };
 
   // 切换到 GitHub tab 时加载配置
-  const handleTabChange = (tab: 'data' | 'github') => {
+  const handleTabChange = (tab: 'data' | 'analytics' | 'github') => {
     setActiveTab(tab);
     if (tab === 'github') loadGhConfig();
   };
@@ -333,6 +701,10 @@ function OptionsApp() {
     useLiveQuery(() =>
       db.submissions.orderBy('timestamp').reverse().toArray()
     ) || [];
+  const allSubmissions =
+    useLiveQuery(() => db.submissions.toArray()) || [];
+  const skillProfiles =
+    useLiveQuery(() => db.skillProfiles.toArray()) || [];
   const problems = useLiveQuery(() => db.problems.toArray()) || [];
   const notes = useLiveQuery(() => db.notes.toArray()) || [];
 
@@ -393,6 +765,16 @@ function OptionsApp() {
               }`}
             >
               数据管理
+            </button>
+            <button
+              onClick={() => handleTabChange('analytics')}
+              className={`text-left px-4 py-2 rounded-lg font-medium transition-colors ${
+                activeTab === 'analytics'
+                  ? 'bg-[#2EA043] text-white'
+                  : 'text-gray-400 hover:bg-[#161B22] hover:text-white'
+              }`}
+            >
+              数据分析
             </button>
             <button
               onClick={() => handleTabChange('github')}
@@ -572,6 +954,14 @@ function OptionsApp() {
                   </div>
                 )}
               </div>
+            )}
+
+            {activeTab === 'analytics' && (
+              <AnalyticsTab
+                submissions={allSubmissions}
+                problems={problems}
+                skillProfiles={skillProfiles}
+              />
             )}
 
             {activeTab === 'github' && (

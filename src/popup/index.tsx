@@ -14,10 +14,9 @@ import './index.css';
 
 function PopupApp() {
   const skillProfiles = useLiveQuery(() => db.skillProfiles.toArray()) || [];
-  const submissions =
-    useLiveQuery(() =>
-      db.submissions.orderBy('timestamp').reverse().limit(20).toArray()
-    ) || [];
+  const allSubs =
+    useLiveQuery(() => db.submissions.orderBy('timestamp').reverse().toArray()) || [];
+  const recentSubs = allSubs.slice(0, 20);
   const problems = useLiveQuery(() => db.problems.toArray()) || [];
   const notes = useLiveQuery(() => db.notes.toArray()) || [];
 
@@ -50,7 +49,7 @@ function PopupApp() {
     const probMap = new Map<string, (typeof problems)[number]>();
     for (const p of problems) probMap.set(p.id, p);
 
-    return submissions.map((s: Submission) => {
+    return recentSubs.map((s: Submission) => {
       const prob = probMap.get(s.problemId);
       const note = noteMap.get(s.problemId);
       return {
@@ -63,14 +62,45 @@ function PopupApp() {
         mistakeTags: note?.mistakeTags || [],
       };
     });
-  }, [submissions, problems, notes]);
+  }, [recentSubs, problems, notes]);
 
   // ── 统计 ──
   const stats = useMemo(() => {
-    const ac = submissions.filter((s) => s.verdict === 'AC').length;
-    const total = submissions.length || 1;
-    return { ac, total, rate: Math.round((ac / total) * 100) };
-  }, [submissions]);
+    const ac = allSubs.filter((s) => s.verdict === 'AC').length;
+    const total = allSubs.length || 1;
+    const today = new Date().toISOString().slice(0, 10);
+    const weekAgo = Date.now() - 7 * 86400000;
+    const todayCount = allSubs.filter((s) => new Date(s.timestamp).toISOString().slice(0, 10) === today).length;
+    const weekCount = allSubs.filter((s) => s.timestamp >= weekAgo).length;
+
+    // 已解题目数
+    const solved = new Set<string>();
+    for (const s of allSubs) {
+      if (s.verdict === 'AC') solved.add(s.problemId);
+    }
+
+    // 连续打卡天数
+    const daySet = new Set<string>();
+    for (const s of allSubs) {
+      daySet.add(new Date(s.timestamp).toISOString().slice(0, 10));
+    }
+    const sorted = [...daySet].sort().reverse();
+    let streak = 0;
+    if (sorted.length > 0) {
+      const todayStr = today;
+      const yestStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      if (sorted[0] === todayStr || sorted[0] === yestStr) {
+        streak = 1;
+        for (let i = 1; i < sorted.length; i++) {
+          const diff = (new Date(sorted[i - 1]).getTime() - new Date(sorted[i]).getTime()) / 86400000;
+          if (Math.abs(diff - 1) < 0.1) streak++;
+          else break;
+        }
+      }
+    }
+
+    return { ac, total, rate: Math.round((ac / total) * 100), todayCount, weekCount, solved: solved.size, streak };
+  }, [allSubs]);
 
   const toggleExpand = (id: string) => {
     setExpanded((prev) => (prev === id ? null : id));
@@ -94,21 +124,28 @@ function PopupApp() {
   return (
     <div className="p-4 w-[400px] bg-[#0D1117] text-gray-100 font-sans">
       {/* 头部 */}
-      <div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-3">
-        <div>
+      <div className="mb-4 border-b border-gray-800 pb-3">
+        <div className="flex justify-between items-center">
           <h1 className="text-lg font-bold text-[#2EA043]">AlgoTracker</h1>
-          <p className="text-xs text-gray-500">
-            {stats.ac} / {stats.total} AC ({stats.rate}%)
-          </p>
+          <a
+            href="/options.html"
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm text-gray-400 hover:text-white"
+          >
+            全部数据 ↗
+          </a>
         </div>
-        <a
-          href="/options.html"
-          target="_blank"
-          rel="noreferrer"
-          className="text-sm text-gray-400 hover:text-white"
-        >
-          全部数据 ↗
-        </a>
+        <p className="text-xs text-gray-500 mt-0.5">
+          {stats.ac} / {stats.total} AC ({stats.rate}%)
+          <span className="mx-2 text-gray-600">|</span>
+          已解 {stats.solved} 题
+        </p>
+        <div className="flex gap-4 mt-1 text-xs text-gray-500">
+          <span>今日 <span className="text-gray-200 font-medium">{stats.todayCount}</span> 次</span>
+          <span>本周 <span className="text-gray-200 font-medium">{stats.weekCount}</span> 次</span>
+          <span>连续 <span className="text-gray-200 font-medium">{stats.streak}</span> 天</span>
+        </div>
       </div>
 
       {/* 能力画像 */}
