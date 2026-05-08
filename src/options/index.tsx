@@ -1,15 +1,180 @@
 import React, { useState, useMemo } from 'react';
 import ReactDOM from 'react-dom/client';
-import { db, type Submission, type Problem, type SkillProfile } from '../lib/db';
+import { db, type Submission, type Problem } from '../lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { getGithubConfig, setGithubConfig, verifyConnection } from '../lib/github';
+import {
+  Database, LineChart, Cloud, Activity
+} from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   PieChart, Pie, Cell,
   AreaChart, Area,
-  ResponsiveContainer, ReferenceLine,
+  ResponsiveContainer,
 } from 'recharts';
 import '../popup/index.css';
+
+// ── 标签统计 & 学习建议面板 ──
+
+function tagLabel(slug: string): string {
+  return slug
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+interface TagStat {
+  tag: string;
+  label: string;
+  total: number;
+  ac: number;
+  acRate: number;
+  lastAt: number;
+  daysSince: number;
+}
+
+function useTagStats(
+  submissions: Submission[],
+  problems: Problem[]
+): TagStat[] {
+  return useMemo(() => {
+    const probMap = new Map(problems.map((p) => [p.id, p]));
+    const tagMap = new Map<
+      string,
+      { total: number; ac: number; lastAt: number }
+    >();
+    for (const sub of submissions) {
+      const prob = probMap.get(sub.problemId);
+      if (!prob || !prob.tags) continue;
+      for (const tag of prob.tags) {
+        const e = tagMap.get(tag) || { total: 0, ac: 0, lastAt: 0 };
+        e.total++;
+        if (sub.verdict === 'AC') e.ac++;
+        if (sub.timestamp > e.lastAt) e.lastAt = sub.timestamp;
+        tagMap.set(tag, e);
+      }
+    }
+    return [...tagMap.entries()]
+      .map(([tag, s]) => ({
+        tag,
+        label: tagLabel(tag),
+        ...s,
+        acRate: s.total ? Math.round((s.ac / s.total) * 100) : 0,
+        daysSince: Math.round((Date.now() - s.lastAt) / 86400000),
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [submissions, problems]);
+}
+
+function acRateColor(rate: number) {
+  if (rate >= 70) return 'bg-[#2EA043]';
+  if (rate >= 40) return 'bg-[#F0883E]';
+  return 'bg-[#F85149]';
+}
+
+function TagStatsPanel({
+  submissions,
+  problems,
+}: {
+  submissions: Submission[];
+  problems: Problem[];
+}) {
+  const tagStats = useTagStats(submissions, problems);
+
+  if (tagStats.length === 0) {
+    return (
+      <div className="bg-[#0D1117] border border-[#30363D] rounded-xl p-5">
+        <h3 className="text-sm font-medium text-gray-300 mb-3">标签统计</h3>
+        <p className="text-gray-500 text-sm py-8 text-center">
+          提交题目以生成标签统计
+        </p>
+      </div>
+    );
+  }
+
+  // 找出最需要关注的标签（低通过率 + 久未练习，至少 3 次提交）
+  const weakTags = tagStats
+    .filter((t) => t.total >= 3)
+    .map((t) => {
+      const weakScore = 1 - t.acRate / 100;
+      const forgetScore = Math.min(t.daysSince / 14, 1);
+      return { ...t, urgency: 0.6 * weakScore + 0.4 * forgetScore };
+    })
+    .sort((a, b) => b.urgency - a.urgency);
+
+  const topWeak = weakTags[0];
+
+  return (
+    <div className="bg-[#0D1117] border border-[#30363D] rounded-xl p-5">
+      <h3 className="text-sm font-medium text-gray-300 mb-4">
+        标签统计 & 学习建议
+      </h3>
+
+      {/* 首要建议 */}
+      {topWeak && topWeak.urgency > 0.15 ? (
+        <div className="bg-[#161B22] border border-[#F0883E]/30 rounded-lg p-4 mb-4">
+          <p className="text-sm text-gray-300">
+            优先练习{' '}
+            <span className="text-[#F0883E] font-semibold">
+              {topWeak.label}
+            </span>
+            （通过率 {topWeak.acRate}%，{topWeak.daysSince}天未练）
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            {topWeak.acRate < 40
+              ? '通过率偏低，建议降低难度，从该标签的基础题开始'
+              : topWeak.daysSince > 7
+                ? '间隔过久，建议做 2-3 道题恢复手感'
+                : '适当练习保持水平'}
+          </p>
+        </div>
+      ) : (
+        <p className="text-gray-500 text-sm mb-4 text-center">
+          各项能力均衡，继续保持！
+        </p>
+      )}
+
+      {/* 标签列表 */}
+      <div className="space-y-1.5">
+        {tagStats.map((t) => (
+          <div key={t.tag} className="flex items-center gap-3 text-sm">
+            <span className="w-28 text-gray-300 truncate shrink-0 text-xs">
+              {t.label}
+            </span>
+            <div className="flex-1 h-2 bg-[#30363D] rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full ${acRateColor(t.acRate)}`}
+                style={{ width: `${Math.max(t.acRate, 6)}%` }}
+              />
+            </div>
+            <span className="w-10 text-right text-xs text-gray-500">
+              {t.acRate}%
+            </span>
+            <span className="w-10 text-right text-xs text-gray-500">
+              {t.total}次
+            </span>
+            <span className="w-16 text-right text-xs text-gray-600">
+              {t.daysSince === 0 ? '今天' : `${t.daysSince}天前`}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-4 mt-4 text-xs text-gray-500">
+        <span>通过率 / 次数 / 最近</span>
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-3 rounded-full bg-[#2EA043]" /> ≥70%
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-3 rounded-full bg-[#F0883E]" /> 40-69%
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-3 rounded-full bg-[#F85149]" /> &lt;40%
+        </span>
+      </div>
+    </div>
+  );
+}
 
 // ── GitHub 同步配置面板 ──
 
@@ -337,11 +502,9 @@ const CHART_TOOLTIP = {
 function AnalyticsTab({
   submissions,
   problems,
-  skillProfiles,
 }: {
   submissions: Submission[];
   problems: Problem[];
-  skillProfiles: SkillProfile[];
 }) {
   // ── KPI 计算 ──
   const kpi = useMemo(() => {
@@ -386,21 +549,6 @@ function AnalyticsTab({
       .map(([date, count]) => ({ date: date.slice(5), count }))
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [submissions]);
-
-  // ── 技能评分 ──
-  const skillData = useMemo(() => {
-    const global = skillProfiles.find((p) => p.tag === 'global');
-    const baseline = global ? Math.round(global.rating) : 1500;
-    return skillProfiles
-      .filter((p) => p.tag !== 'global')
-      .map((p) => ({
-        name: p.tag,
-        rating: Math.round(p.rating),
-        acRate: p.totalAttempted ? ((p.totalAC / p.totalAttempted) * 100).toFixed(0) : '0',
-        baseline,
-      }))
-      .sort((a, b) => b.rating - a.rating);
-  }, [skillProfiles]);
 
   // ── 结果分布 ──
   const verdictData = useMemo(() => {
@@ -466,10 +614,10 @@ function AnalyticsTab({
   // ── 空状态 ──
   if (submissions.length === 0) {
     return (
-      <div className="text-center py-20">
-        <div className="text-5xl mb-4">📊</div>
-        <p className="text-gray-400 text-lg mb-2">还没有提交记录</p>
-        <p className="text-gray-500 text-sm">
+      <div className="flex flex-col items-center justify-center text-gray-500 py-32 bg-[#0D1117] rounded-xl border border-[#30363D]">
+        <LineChart className="w-16 h-16 mb-4 text-gray-600" />
+        <p className="text-xl font-medium text-gray-400 mb-2">还没有提交记录</p>
+        <p className="text-sm text-gray-600">
           去力扣提交一道题，数据分析将自动生成
         </p>
       </div>
@@ -564,56 +712,8 @@ function AnalyticsTab({
         </div>
       </div>
 
-      {/* 技能评分 */}
-      <div className="bg-[#0D1117] border border-[#30363D] rounded-xl p-4">
-        <h3 className="text-sm font-medium text-gray-300 mb-3">技能评分</h3>
-        {skillData.length === 0 ? (
-          <p className="text-gray-500 text-sm py-8 text-center">提交题目以生成能力画像</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={Math.max(180, skillData.length * 44)}>
-            <BarChart data={skillData} layout="vertical" margin={{ left: 10 }}>
-              <CartesianGrid stroke="#30363D" strokeDasharray="3 3" horizontal={false} />
-              <XAxis
-                type="number"
-                domain={[1200, 'dataMax + 100']}
-                tick={{ fill: '#8B949E', fontSize: 10 }}
-              />
-              <YAxis
-                type="category"
-                dataKey="name"
-                tick={{ fill: '#8B949E', fontSize: 12 }}
-                width={50}
-              />
-              <Tooltip
-                {...CHART_TOOLTIP}
-                formatter={(_value, _name, props) => [
-                  `${props.payload.rating} (AC ${props.payload.acRate}%)`,
-                  'Rating',
-                ]}
-              />
-              <ReferenceLine
-                x={skillData[0]?.baseline ?? 1500}
-                stroke="#484F58"
-                strokeDasharray="4 4"
-                label={{
-                  value: '基线',
-                  fill: '#8B949E',
-                  fontSize: 10,
-                  position: 'insideTopRight',
-                }}
-              />
-              <Bar dataKey="rating" radius={[0, 3, 3, 0]}>
-                {skillData.map((entry) => (
-                  <Cell
-                    key={entry.name}
-                    fill={entry.rating >= entry.baseline ? '#2EA043' : '#F0883E'}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </div>
+      {/* 标签统计 & 学习建议 */}
+      <TagStatsPanel submissions={submissions} problems={problems} />
 
       {/* 图表行 2：每周趋势 + 难度分布 */}
       <div className="grid grid-cols-2 gap-6">
@@ -701,10 +801,6 @@ function OptionsApp() {
     useLiveQuery(() =>
       db.submissions.orderBy('timestamp').reverse().toArray()
     ) || [];
-  const allSubmissions =
-    useLiveQuery(() => db.submissions.toArray()) || [];
-  const skillProfiles =
-    useLiveQuery(() => db.skillProfiles.toArray()) || [];
   const problems = useLiveQuery(() => db.problems.toArray()) || [];
   const notes = useLiveQuery(() => db.notes.toArray()) || [];
 
@@ -749,41 +845,47 @@ function OptionsApp() {
   return (
     <div className="min-h-screen bg-[#0D1117] text-gray-200 font-sans p-8">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-[#2EA043] mb-8">
-          AlgoTracker 控制台
-        </h1>
+        <div className="flex items-center gap-3 mb-8">
+          <Activity className="w-8 h-8 text-[#2EA043]" />
+          <h1 className="text-3xl font-bold text-[#2EA043]">
+            AlgoTracker 控制台
+          </h1>
+        </div>
 
         <div className="flex gap-6">
           {/* 左侧导航 */}
-          <div className="w-48 shrink-0 flex flex-col gap-2">
+          <div className="w-56 shrink-0 flex flex-col gap-2">
             <button
               onClick={() => handleTabChange('data')}
-              className={`text-left px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`text-left px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${
                 activeTab === 'data'
-                  ? 'bg-[#2EA043] text-white'
+                  ? 'bg-[#2EA043] text-white shadow-sm'
                   : 'text-gray-400 hover:bg-[#161B22] hover:text-white'
               }`}
             >
+              <Database className="w-5 h-5" />
               数据管理
             </button>
             <button
               onClick={() => handleTabChange('analytics')}
-              className={`text-left px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`text-left px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${
                 activeTab === 'analytics'
-                  ? 'bg-[#2EA043] text-white'
+                  ? 'bg-[#2EA043] text-white shadow-sm'
                   : 'text-gray-400 hover:bg-[#161B22] hover:text-white'
               }`}
             >
+              <LineChart className="w-5 h-5" />
               数据分析
             </button>
             <button
               onClick={() => handleTabChange('github')}
-              className={`text-left px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`text-left px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${
                 activeTab === 'github'
-                  ? 'bg-[#2EA043] text-white'
+                  ? 'bg-[#2EA043] text-white shadow-sm'
                   : 'text-gray-400 hover:bg-[#161B22] hover:text-white'
               }`}
             >
+              <Cloud className="w-5 h-5" />
               GitHub 同步
             </button>
           </div>
@@ -804,8 +906,10 @@ function OptionsApp() {
                   </div>
 
                   {displayData.length === 0 ? (
-                    <div className="text-center text-gray-500 py-16">
-                      暂无提交记录
+                    <div className="flex flex-col items-center justify-center text-gray-500 py-24 bg-[#0D1117] rounded-xl border border-[#30363D]">
+                      <Database className="w-12 h-12 mb-4 text-gray-600" />
+                      <p className="text-lg">暂无提交记录</p>
+                      <p className="text-sm text-gray-600 mt-2">去力扣提交一道题吧！</p>
                     </div>
                   ) : (
                     <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
@@ -958,9 +1062,8 @@ function OptionsApp() {
 
             {activeTab === 'analytics' && (
               <AnalyticsTab
-                submissions={allSubmissions}
+                submissions={submissions}
                 problems={problems}
-                skillProfiles={skillProfiles}
               />
             )}
 

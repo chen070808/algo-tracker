@@ -1,6 +1,7 @@
 /// <reference types="chrome"/>
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
+import { CheckCircle2, XCircle, X, Edit3, BookOpen, AlertTriangle } from 'lucide-react';
 import '../popup/index.css';
 
 console.log('[AlgoTracker] Content script loaded at:', window.location.href);
@@ -34,6 +35,8 @@ interface LeetCodeSubmission {
   memory: string;
   titleSlug: string;
   code?: string;
+  difficulty?: number;
+  tags?: { slug: string; name: string }[];
 }
 
 // ── 安全调用 background（处理扩展重载后 context 失效的情况）──
@@ -107,15 +110,16 @@ function Drawer({
     sessionStorage.removeItem('algoTracker_pendingSubmission');
   };
 
-  const verdictColor = isAC ? 'text-green-400' : 'text-red-400';
-  const verdictIcon = isAC ? '✅' : '❌';
+  const verdictColor = isAC ? 'text-[#2EA043]' : 'text-[#F85149]';
+  const verdictIcon = isAC ? <CheckCircle2 className="w-5 h-5 text-[#2EA043]" /> : <XCircle className="w-5 h-5 text-[#F85149]" />;
 
   if (!isOpen) {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 right-4 bg-[#2EA043] text-white px-4 py-2 rounded-full shadow-lg z-[9999] hover:bg-green-600 transition-colors"
+        className="fixed bottom-6 right-6 bg-[#2EA043] text-white px-5 py-3 rounded-full shadow-lg z-[9999] hover:bg-green-600 transition-all flex items-center gap-2 font-medium hover:scale-105 active:scale-95"
       >
+        <Edit3 className="w-4 h-4" />
         AlgoTracker 复盘
       </button>
     );
@@ -124,10 +128,10 @@ function Drawer({
   // 保存成功态
   if (saved) {
     return (
-      <div className="fixed top-0 right-0 h-full w-[400px] bg-[#0D1117] border-l border-[#30363D] shadow-2xl z-[9999] p-6 flex items-center justify-center text-gray-100 font-sans">
-        <div className="text-center">
-          <div className="text-4xl mb-4">📝</div>
-          <p className="text-lg font-semibold text-[#2EA043]">已保存</p>
+      <div className="fixed top-0 right-0 h-full w-[400px] bg-[#0D1117] border-l border-[#30363D] shadow-2xl z-[9999] p-6 flex flex-col items-center justify-center text-gray-100 font-sans">
+        <div className="bg-[#161B22] border border-[#2EA043]/30 p-8 rounded-2xl text-center shadow-xl w-full">
+          <CheckCircle2 className="w-16 h-16 text-[#2EA043] mx-auto mb-4" />
+          <p className="text-xl font-bold text-white">已保存</p>
           <p className="text-sm text-gray-400 mt-2">
             {mistakeTags.length > 0
               ? '错题已加入复习计划'
@@ -141,27 +145,28 @@ function Drawer({
   return (
     <div className="fixed top-0 right-0 h-full w-[400px] bg-[#0D1117] border-l border-[#30363D] shadow-2xl z-[9999] p-6 flex flex-col text-gray-100 font-sans overflow-y-auto">
       {/* 标题栏 */}
-      <div className="flex justify-between items-center mb-5">
+      <div className="flex justify-between items-start mb-6">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <span>{verdictIcon}</span>
+          <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-1.5">
+            {verdictIcon}
             {isAC ? '通过了！' : '提交复盘'}
           </h2>
           {submission && (
-            <p className="text-xs text-gray-400 mt-1">
-              <span className={verdictColor}>{submission.status_display}</span>
-              {submission.runtime ? `  ·  ${submission.runtime}` : ''}
-              {submission.memory ? `  ·  ${submission.memory}` : ''}
-              {submission.lang ? `  ·  ${submission.lang}` : ''}
-            </p>
+            <div className="flex flex-wrap gap-2 text-xs text-gray-400 mt-2">
+              <span className={`font-medium ${verdictColor} bg-current/10 px-2 py-0.5 rounded`}>
+                {submission.status_display}
+              </span>
+              {submission.runtime && <span className="bg-[#161B22] px-2 py-0.5 rounded border border-[#30363D]">{submission.runtime}</span>}
+              {submission.memory && <span className="bg-[#161B22] px-2 py-0.5 rounded border border-[#30363D]">{submission.memory}</span>}
+            </div>
           )}
         </div>
         <button
           onClick={handleDismiss}
-          className="text-gray-400 hover:text-white hover:bg-[#30363D] rounded-full w-8 h-8 flex items-center justify-center text-lg leading-none transition-colors"
+          className="text-gray-400 hover:text-white hover:bg-[#30363D] rounded-full w-8 h-8 flex items-center justify-center transition-colors"
           title="关闭"
         >
-          ✕
+          <X className="w-5 h-5" />
         </button>
       </div>
 
@@ -252,6 +257,7 @@ function Drawer({
 
 let currentSubmission: LeetCodeSubmission | null = null;
 let root: ReactDOM.Root | null = null;
+let lastAutoSavedKey = '';
 
 function renderDrawer(forceOpen = false) {
   if (!root) return;
@@ -263,6 +269,13 @@ function renderDrawer(forceOpen = false) {
 }
 
 function saveViaBackground() {
+  if (!currentSubmission) return;
+  const dedupKey = `${currentSubmission.titleSlug}::${currentSubmission.status_display}`;
+  if (dedupKey === lastAutoSavedKey) {
+    console.log('[AlgoTracker] 跳过重复自动保存:', dedupKey);
+    return;
+  }
+  lastAutoSavedKey = dedupKey;
   sendToBackground('AUTO_SAVE_SUBMISSION', { submission: currentSubmission })
     .then(() => { /* 静默成功 */ })
     .catch(() => { /* context 失效，刷新页面即可恢复 */ });

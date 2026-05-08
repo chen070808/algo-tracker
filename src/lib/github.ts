@@ -26,9 +26,9 @@ export async function setGithubConfig(config: GithubConfig): Promise<void> {
   });
 }
 
-// 辅助函数：将字符串转为 Base64（支持中文）
 function utf8ToBase64(str: string): string {
-  return btoa(unescape(encodeURIComponent(str)));
+  const bytes = new TextEncoder().encode(str);
+  return btoa(String.fromCharCode(...bytes));
 }
 
 // 核心同步函数
@@ -94,10 +94,10 @@ export async function syncToGithub(
     'typescript': 'ts',
     'go': 'go',
     'rust': 'rs',
-    'ruby': 'rs',
-    'swift': 'rb',
-    'scala': 'swift',
-    'kotlin': 'scala',
+    'ruby': 'rb',
+    'swift': 'swift',
+    'scala': 'scala',
+    'kotlin': 'kt',
     'php': 'php',
     'csharp': 'cs'
   };

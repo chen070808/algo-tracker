@@ -1,28 +1,28 @@
-export function calculateProblemScore(
-  userTagRating: number,
-  globalRating: number,
-  problemRating: number,
-  lastPracticedAt: number
+/**
+ * 计算标签的练习紧急度分数
+ * @param acRate 该标签的 AC 率 (0-100)
+ * @param daysSinceLastPractice 距上次练习的天数
+ * @param totalAttempted 总提交次数
+ * @returns 紧急度 0-1，越高越需要练习
+ */
+export function calculateTagUrgency(
+  acRate: number,
+  daysSinceLastPractice: number,
+  totalAttempted: number
 ): number {
-  // 1. 难度匹配分 (W1) - 最优胜率目标设为 60% (0.6)
-  const expectedProb = 1 / (1 + Math.pow(10, (problemRating - userTagRating) / 400));
-  // 胜率越接近 0.6，得分越高 (最高 1 分，最低 0 分)
-  const difficultyScore = 1 - Math.abs(expectedProb - 0.6) / 0.6;
+  // 样本不足时降低置信度
+  if (totalAttempted < 3) return 0;
+  const weaknessScore = 1 - acRate / 100;
+  const forgettingScore = Math.min(daysSinceLastPractice / 14, 1);
+  return 0.6 * weaknessScore + 0.4 * forgettingScore;
+}
 
-  // 2. 短板补齐分 (W2)
-  // 如果该标签 rating 低于全局 rating，则加分
-  const deficit = globalRating - userTagRating;
-  const weaknessScore = deficit > 0 ? Math.min(deficit / 400, 1) : 0;
-
-  // 3. 遗忘分 (W3)
-  // 距离上次练习时间越长，得分越高
-  const daysSinceLastPractice = (Date.now() - lastPracticedAt) / (1000 * 60 * 60 * 24);
-  const forgettingScore = Math.min(daysSinceLastPractice / 14, 1); // 14天不练满分
-
-  // 权重
-  const W1 = 0.5;
-  const W2 = 0.3;
-  const W3 = 0.2;
-
-  return W1 * difficultyScore + W2 * weaknessScore + W3 * forgettingScore;
+/**
+ * 基于全局 Elo 和题目难度，计算预期胜率
+ */
+export function getExpectedProbability(
+  userRating: number,
+  problemRating: number
+): number {
+  return 1 / (1 + Math.pow(10, (problemRating - userRating) / 400));
 }

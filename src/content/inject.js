@@ -160,7 +160,58 @@
   }
 
   // ============================================================
-  // 4. Submission identity (slug + id)
+  // 4. Problem difficulty & tags extraction
+  // ============================================================
+
+  const DIFFICULTY_MAP = {
+    'Easy': 1200, '简单': 1200,
+    'Medium': 1600, '中等': 1600,
+    'Hard': 2000, '困难': 2000,
+  };
+
+  function extractTags() {
+    const tags = [];
+    const seen = new Set();
+    try {
+      const tagLinks = document.querySelectorAll('a[href*="/tag/"]');
+      for (const link of tagLinks) {
+        const href = link.getAttribute('href') || '';
+        const m = href.match(/\/tag\/([^/?#]+)/);
+        if (!m) continue;
+        const slug = m[1];
+        if (seen.has(slug)) continue;
+        seen.add(slug);
+        tags.push({ slug, name: (link.textContent || '').trim() || slug });
+      }
+    } catch (_) {}
+    return tags;
+  }
+
+  function extractDifficulty() {
+    try {
+      // Try data attribute first (new LeetCode UI)
+      const difficultyEl = document.querySelector('[data-difficulty]');
+      if (difficultyEl) {
+        const text = (difficultyEl.textContent || '').trim();
+        if (text in DIFFICULTY_MAP) return DIFFICULTY_MAP[text];
+      }
+      // Scan near the problem title
+      const titleEl = document.querySelector('[data-cy="question-title"]');
+      const titleArea = titleEl ? titleEl.closest('[class*="flex"]') || titleEl.parentElement : null;
+      const searchRoot = titleArea || document.body;
+      const walker = document.createTreeWalker(searchRoot, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        const text = (node.textContent || '').trim();
+        if (text in DIFFICULTY_MAP) return DIFFICULTY_MAP[text];
+      }
+    } catch (_) {}
+    return 1500;
+  }
+
+
+  // ============================================================
+  // 5. Submission identity (slug + id)
   // ============================================================
 
   function getIdentity() {
@@ -225,7 +276,7 @@
 
   let detectionLock = false;
 
-  function detectAndDispatch(source) {
+  async function detectAndDispatch(source) {
     if (detectionLock) return;
     detectionLock = true;
 
@@ -244,14 +295,23 @@
       markProcessed(slug, verdict);
       stopPolling();
 
+      // 短暂延迟后重读 identity，捕获 LeetCode 跳转后的 submission ID
+      await new Promise(r => setTimeout(r, 500));
+      const { slug: slug2, submissionId: idAfterRedirect } = getIdentity();
+      const finalSlug = slug2 || slug;
+      const finalId = idAfterRedirect || submissionId;
+
       const code = getMonacoCode();
       const lang = getCodeLanguage();
       const { runtime, memory } = extractRuntimeMemory(resultEl);
+      const difficulty = extractDifficulty();
+      const tags = extractTags();
 
       console.log(
         '[AlgoTracker] 检测到提交结果 (' + source + '):',
-        verdict, '| slug:', slug, '| lang:', lang,
+        verdict, '| slug:', finalSlug, '| id:', finalId, '| lang:', lang,
         '| runtime:', runtime, '| memory:', memory,
+        '| difficulty:', difficulty, '| tags:', tags,
         '| code length:', code.length
       );
 
@@ -259,13 +319,15 @@
         {
           type: 'ALGOTRACKER_SUBMISSION',
           data: {
-            id: submissionId,
+            id: finalId,
             status_display: verdict,
             lang: lang,
             runtime: runtime,
             memory: memory,
-            titleSlug: slug,
+            titleSlug: finalSlug,
             code: code,
+            difficulty: difficulty,
+            tags: tags,
           },
         },
         '*'
