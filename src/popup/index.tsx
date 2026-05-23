@@ -1,409 +1,142 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { db, type Submission, type Problem, type Note } from '../lib/db';
+import { type BadgeDef } from '../lib/achievements';
+import { AchievementIcon } from '../components/AchievementIcon';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { 
-  ExternalLink, Activity, Target, Flame, Calendar, 
-  ChevronDown, ChevronUp, LayoutDashboard
+import { getDailyRecommendations, type TagRecommendation } from '../lib/recommend';
+import { getDueReviewCount } from '../lib/sm2';
+import { COMPETITIONS, getTargetElo, computeBandStats, eloProgressColor } from '../lib/elo';
+import { TOPIC_TAXONOMY } from '../lib/knowledge-graph';
+import {
+  ExternalLink, Activity, Target, Flame, Calendar,
+  ChevronDown, ChevronUp, LayoutDashboard, BookOpen, Award, TrendingUp
 } from 'lucide-react';
+import Heatmap from './Heatmap';
+import SyncButton from './SyncButton';
 import './index.css';
 
-// ── 工具函数 ──
+// ── 工具 ──
 
 function tagLabel(slug: string): string {
-  return slug
-    .split('-')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
+  return slug.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
-interface TagStat {
-  tag: string;
-  label: string;
-  total: number;
-  ac: number;
-  acRate: number;
-  lastAt: number;
-  daysSince: number;
-}
+const BAND_DEFS = [
+  { key: '<1500' as const, label: '简单', color: '#2EA043' },
+  { key: '1500-2000' as const, label: '中等', color: '#D29922' },
+  { key: '2000+' as const, label: '困难', color: '#F85149' },
+];
 
-function useTagStats(
-  submissions: Submission[],
-  problems: Problem[]
-): TagStat[] {
-  return useMemo(() => {
-    const probMap = new Map(problems.map((p) => [p.id, p]));
-    const tagMap = new Map<
-      string,
-      { total: number; ac: number; lastAt: number }
-    >();
-    for (const sub of submissions) {
-      const prob = probMap.get(sub.problemId);
-      if (!prob || !prob.tags) continue;
-      for (const tag of prob.tags) {
-        const e = tagMap.get(tag) || { total: 0, ac: 0, lastAt: 0 };
-        e.total++;
-        if (sub.verdict === 'AC') e.ac++;
-        if (sub.timestamp > e.lastAt) e.lastAt = sub.timestamp;
-        tagMap.set(tag, e);
-      }
-    }
-    return [...tagMap.entries()]
-      .map(([tag, s]) => ({
-        tag,
-        label: tagLabel(tag),
-        ...s,
-        acRate: s.total ? Math.round((s.ac / s.total) * 100) : 0,
-        daysSince: Math.round((Date.now() - s.lastAt) / 86400000),
-      }))
-      .sort((a, b) => b.total - a.total);
-  }, [submissions, problems]);
-}
+// ── 难度分带条 ──
 
-// ── 紧凑建议 ──
-
-function CompactRec({ tagStats }: { tagStats: TagStat[] }) {
-  const rec = useMemo(() => {
-    if (tagStats.length === 0) return null;
-    // 优先推荐通过率低且近期练过的（诊断可靠）、或间隔过久的
-    let best: TagStat | null = null;
-    let bestScore = -1;
-    for (const t of tagStats) {
-      if (t.total < 3) continue; // 样本太少，不做诊断
-      const weakScore = 1 - t.acRate / 100;
-      const forgetScore = Math.min(t.daysSince / 14, 1);
-      const score = 0.6 * weakScore + 0.4 * forgetScore;
-      if (score > bestScore) {
-        bestScore = score;
-        best = t;
-      }
-    }
-    return best;
-  }, [tagStats]);
-
-  if (!rec) return null;
-
+function BandBars({ tag, subs, probs }: { tag: string; subs: Submission[]; probs: Problem[] }) {
+  const bands = useMemo(() => computeBandStats(tag, subs, probs), [tag, subs, probs]);
   return (
-    <div className="mb-3 text-xs text-gray-400 bg-[#161B22] rounded-lg border border-[#F0883E]/30 px-3 py-2.5 flex items-start gap-2">
-      <Target className="w-4 h-4 text-[#F0883E] shrink-0 mt-0.5" />
-      <div>
-        <span className="text-gray-400">建议练习：</span>
-        <span className="text-[#F0883E] font-medium">{rec.label}</span>
-        <span className="text-gray-500">
-          {' '}
-          （通过率 {rec.acRate}%{rec.daysSince > 2 ? `，${rec.daysSince}天未练` : ''}）
-        </span>
-      </div>
+    <div className="space-y-1 mt-1.5">
+      {BAND_DEFS.map((bd) => {
+        const b = bands.find((x) => x.band === bd.key)!;
+        return (
+          <div key={bd.key} className="flex items-center gap-2 text-[10px]">
+            <span className="w-7 text-right text-[var(--color-text-muted)] shrink-0">{bd.label}</span>
+            <div className="flex-1 h-1.5 bg-[var(--color-border-muted)] rounded-full overflow-hidden">
+              {b.total > 0 && (
+                <div className="h-full rounded-full elo-bar" style={{ width: `${Math.max(b.acRate, 6)}%`, backgroundColor: bd.color }} />
+              )}
+            </div>
+            <span className="w-16 text-right font-mono text-[var(--color-text-muted)]">
+              {b.total > 0 ? `${b.acRate}%` : '--'}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-// ── 主应用 ──
+// ── Elo 进度条 ──
 
-function PopupApp() {
-  const skillProfiles =
-    useLiveQuery(() => db.skillProfiles.toArray()) || [];
-  const allSubs =
-    useLiveQuery(
-      () => db.submissions.orderBy('timestamp').reverse().toArray()
-    ) || [];
-  const recentSubs = allSubs.slice(0, 20);
-  const problems = useLiveQuery(() => db.problems.toArray()) || [];
-  const notes = useLiveQuery(() => db.notes.toArray()) || [];
-
-  const [expanded, setExpanded] = useState<string | null>(null);
-
-  // ── 标签统计 ──
-  const tagStats = useTagStats(allSubs, problems);
-
-  // ── 全局 Elo ──
-  const globalRating = useMemo(() => {
-    const g = skillProfiles.find((p) => p.tag === 'global');
-    return g ? Math.round(g.rating) : 1500;
-  }, [skillProfiles]);
-
-  // ── 组装近期记录 ──
-  const recentItems = useMemo(() => {
-    const noteMap = new Map<string, Note>();
-    for (const n of notes) noteMap.set(n.problemId, n);
-    const probMap = new Map<string, Problem>();
-    for (const p of problems) probMap.set(p.id, p);
-
-    return recentSubs.map((s: Submission) => {
-      const prob = probMap.get(s.problemId);
-      const note = noteMap.get(s.problemId);
-      return {
-        ...s,
-        title: prob?.title || s.problemId.replace('leetcode-cn_', ''),
-        url:
-          prob?.url ||
-          `https://leetcode.cn/problems/${s.problemId.replace('leetcode-cn_', '')}/`,
-        noteContent: note?.markdownContent || '',
-        mistakeTags: note?.mistakeTags || [],
-      };
-    });
-  }, [recentSubs, problems, notes]);
-
-  // ── 统计 ──
-  const stats = useMemo(() => {
-    const ac = allSubs.filter((s) => s.verdict === 'AC').length;
-    const total = allSubs.length || 1;
-    const today = new Date().toISOString().slice(0, 10);
-    const weekAgo = Date.now() - 7 * 86400000;
-    const todayCount = allSubs.filter(
-      (s) => new Date(s.timestamp).toISOString().slice(0, 10) === today
-    ).length;
-    const weekCount = allSubs.filter((s) => s.timestamp >= weekAgo).length;
-
-    const solved = new Set<string>();
-    for (const s of allSubs) {
-      if (s.verdict === 'AC') solved.add(s.problemId);
-    }
-
-    const daySet = new Set<string>();
-    for (const s of allSubs) {
-      daySet.add(new Date(s.timestamp).toISOString().slice(0, 10));
-    }
-    const sorted = [...daySet].sort().reverse();
-    let streak = 0;
-    if (sorted.length > 0) {
-      const todayStr = today;
-      const yestStr = new Date(Date.now() - 86400000)
-        .toISOString()
-        .slice(0, 10);
-      if (sorted[0] === todayStr || sorted[0] === yestStr) {
-        streak = 1;
-        for (let i = 1; i < sorted.length; i++) {
-          const diff =
-            (new Date(sorted[i - 1]).getTime() -
-              new Date(sorted[i]).getTime()) /
-            86400000;
-          if (Math.abs(diff - 1) < 0.1) streak++;
-          else break;
-        }
-      }
-    }
-
-    return {
-      ac,
-      total,
-      rate: Math.round((ac / total) * 100),
-      todayCount,
-      weekCount,
-      solved: solved.size,
-      streak,
-    };
-  }, [allSubs]);
-
-  const toggleExpand = (id: string) => {
-    setExpanded((prev) => (prev === id ? null : id));
-  };
-
-  const verdictBadge = (v: string) => {
-    const isAC = v === 'AC';
-    return (
-      <span
-        className={`text-xs font-bold px-2 py-0.5 rounded shrink-0 ${
-          isAC
-            ? 'bg-[#2EA043]/20 text-[#2EA043]'
-            : 'bg-[#F85149]/20 text-[#F85149]'
-        }`}
-      >
-        {v}
+function EloBar({ current, target }: { current: number; target: number }) {
+  const pct = Math.min(Math.round((current / target) * 100), 100);
+  const color = eloProgressColor(current, target);
+  const done = current >= target;
+  return (
+    <div className="flex items-center gap-2 flex-1">
+      <div className="flex-1 h-1.5 bg-[var(--color-border-muted)] rounded-full overflow-hidden">
+        <div className="h-full rounded-full elo-bar" style={{ width: `${Math.max(pct, 3)}%`, backgroundColor: color }} />
+      </div>
+      <span className={`text-[10px] font-semibold font-mono w-14 text-right ${done ? 'text-[var(--color-success)]' : 'text-[var(--color-text-secondary)]'}`}>
+        {done ? `✓ ${current}` : `${current}/${target}`}
       </span>
-    );
-  };
+    </div>
+  );
+}
 
-  // AC 率颜色
-  const acRateColor = (rate: number) => {
-    if (rate >= 70) return 'bg-[#2EA043]';
-    if (rate >= 40) return 'bg-[#F0883E]';
-    return 'bg-[#F85149]';
-  };
+// ── 能力评估面板 ──
+
+function SkillPanel({
+  skillProfiles, submissions, problems, targetCompId,
+}: {
+  skillProfiles: any[]; submissions: Submission[]; problems: Problem[]; targetCompId: string;
+}) {
+  const [expandedTag, setExpandedTag] = useState<string | null>(null);
+
+  const topicLabelMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const t of TOPIC_TAXONOMY) m.set(t.id, `${t.labelCn} ${t.labelEn}`);
+    return m;
+  }, []);
+
+  const sorted = useMemo(() => {
+    return skillProfiles
+      .filter((sp) => sp.tag !== 'global' && sp.totalAttempted >= 1)
+      .map((sp) => {
+        const target = getTargetElo(targetCompId, sp.tag);
+        const label = topicLabelMap.get(sp.tag) || tagLabel(sp.tag);
+        return { ...sp, label, currentElo: Math.round(sp.rating), targetElo: target, eloGap: target - Math.round(sp.rating) };
+      })
+      .sort((a, b) => b.eloGap - a.eloGap);
+  }, [skillProfiles, targetCompId, topicLabelMap]);
+
+  if (sorted.length === 0) {
+    return (
+      <div className="card mb-3">
+        <h2 className="section-label mb-2">能力评估</h2>
+        <div className="empty-state py-6"><Target className="w-8 h-8 mb-2 opacity-30" /><p className="text-xs">提交题目以生成能力评估</p></div>
+      </div>
+    );
+  }
+
+  const doneCount = sorted.filter((t) => t.eloGap <= 0).length;
 
   return (
-    <div className="p-4 w-[400px] bg-[#0D1117] text-gray-100 font-sans">
-      {/* 头部 */}
-      <div className="mb-4 border-b border-gray-800 pb-4">
-        <div className="flex justify-between items-center mb-3">
-          <h1 className="text-lg font-bold text-[#2EA043] flex items-center gap-2">
-            <LayoutDashboard className="w-5 h-5" />
-            AlgoTracker
-          </h1>
-          <a
-            href="/options.html"
-            target="_blank"
-            rel="noreferrer"
-            className="text-xs flex items-center gap-1 bg-[#21262D] hover:bg-[#30363D] text-gray-300 px-2.5 py-1.5 rounded-md transition-colors"
-          >
-            控制台 <ExternalLink className="w-3 h-3" />
-          </a>
-        </div>
-        
-        {/* KPI 网格 */}
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          <div className="bg-[#161B22] rounded-md p-2 border border-gray-800 flex flex-col items-center justify-center">
-            <span className="text-[10px] text-gray-500 mb-0.5">AC / 总数</span>
-            <span className="text-sm font-semibold text-gray-200">{stats.ac} <span className="text-gray-500 text-xs font-normal">/ {stats.total}</span></span>
-          </div>
-          <div className="bg-[#161B22] rounded-md p-2 border border-gray-800 flex flex-col items-center justify-center">
-            <span className="text-[10px] text-gray-500 mb-0.5">已解题数</span>
-            <span className="text-sm font-semibold text-gray-200">{stats.solved}</span>
-          </div>
-          <div className="bg-[#161B22] rounded-md p-2 border border-gray-800 flex flex-col items-center justify-center">
-            <span className="text-[10px] text-gray-500 mb-0.5">Rating</span>
-            <span className="text-sm font-semibold text-[#F0883E]">{globalRating}</span>
-          </div>
-        </div>
-
-        {/* 活跃统计 */}
-        <div className="flex justify-between items-center px-1 text-xs text-gray-400">
-          <span className="flex items-center gap-1.5"><Activity className="w-3.5 h-3.5 text-blue-400" /> 今日 <span className="text-gray-200 font-medium">{stats.todayCount}</span></span>
-          <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-purple-400" /> 本周 <span className="text-gray-200 font-medium">{stats.weekCount}</span></span>
-          <span className="flex items-center gap-1.5"><Flame className="w-3.5 h-3.5 text-orange-400" /> 连续 <span className="text-gray-200 font-medium">{stats.streak}</span></span>
-        </div>
+    <div className="card mb-3">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="section-label">能力评估</h2>
+        <span className="text-[10px] text-[var(--color-text-muted)]">{doneCount}/{sorted.length} 达标</span>
       </div>
-
-      {/* 标签能力分布 */}
-      <div className="mb-3">
-        <div className="flex items-center gap-1.5 mb-2">
-          <Target className="w-4 h-4 text-gray-400" />
-          <h2 className="text-sm font-semibold text-gray-300">
-            能力分布
-          </h2>
-        </div>
-        {tagStats.length === 0 ? (
-          <div className="text-xs text-gray-500 text-center py-6 bg-[#161B22] rounded-lg border border-gray-800">
-            去力扣提交题目以生成能力分布
-          </div>
-        ) : (
-          <div className="bg-[#161B22] rounded-lg border border-gray-800 p-3 space-y-1.5">
-            {tagStats.slice(0, 8).map((t) => (
-              <div key={t.tag} className="flex items-center gap-2">
-                <span className="w-24 text-xs text-gray-300 truncate shrink-0">
-                  {t.label}
-                </span>
-                <div className="flex-1 h-2.5 bg-[#30363D] rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${acRateColor(t.acRate)}`}
-                    style={{ width: `${Math.max(t.acRate, 8)}%` }}
-                  />
-                </div>
-                <span className="w-14 text-right text-xs text-gray-500">
-                  {t.total}次 {t.acRate}%
-                </span>
-              </div>
-            ))}
-            {tagStats.length > 8 && (
-              <p className="text-xs text-gray-600 text-center pt-1">
-                +{tagStats.length - 8} 个标签，详见控制台
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* 精简学习建议 */}
-      <CompactRec tagStats={tagStats} />
-
-      {/* 最近提交 */}
-      <div className="flex items-center gap-1.5 mb-2">
-        <Activity className="w-4 h-4 text-gray-400" />
-        <h2 className="text-sm font-semibold text-gray-300">
-          最近提交
-        </h2>
-      </div>
-      {recentItems.length === 0 && (
-        <div className="text-xs text-gray-500 text-center py-6 bg-[#161B22] rounded-lg border border-gray-800">
-          去力扣提交一道题吧！
-        </div>
-      )}
-      <div className="space-y-2 max-h-96 overflow-y-auto">
-        {recentItems.map((item) => {
-          const isOpen = expanded === item.id;
+      <div className="space-y-0.5 max-h-72 overflow-y-auto custom-scrollbar">
+        {sorted.map((sp) => {
+          const isOpen = expandedTag === sp.tag;
           return (
-            <div
-              key={item.id}
-              className="bg-[#161B22] rounded-lg border border-gray-800 overflow-hidden"
-            >
+            <div key={sp.tag}>
               <button
-                onClick={() => toggleExpand(item.id)}
-                className="w-full text-left p-3 hover:bg-[#21262D] transition-colors flex items-center gap-3"
+                onClick={() => setExpandedTag(isOpen ? null : sp.tag)}
+                className="w-full flex items-center gap-2 py-1.5 px-2 row-hover rounded text-left transition-colors"
               >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    {verdictBadge(item.verdict)}
-                    <span className="text-sm font-medium text-gray-200 truncate">
-                      {item.title}
-                    </span>
-                  </div>
-                  <div className="flex gap-3 text-xs text-gray-500 mt-1">
-                    {item.runtimeStr ? <span>{item.runtimeStr}</span> : null}
-                    {item.memoryStr ? <span>{item.memoryStr}</span> : null}
-                    {item.language ? <span>{item.language}</span> : null}
-                    <span>
-                      {new Date(item.timestamp).toLocaleString('zh-CN', {
-                        month: 'numeric',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
-                  </div>
-                </div>
-                <span className="text-gray-500 shrink-0 flex items-center justify-center w-6 h-6">
-                  {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                <span className="w-18 text-xs font-medium text-[var(--color-text-primary)] truncate shrink-0">{sp.label}</span>
+                <EloBar current={sp.currentElo} target={sp.targetElo} />
+                <span className="text-[var(--color-text-muted)] shrink-0 w-4 h-4 flex items-center justify-center">
+                  {isOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                 </span>
               </button>
-
               {isOpen && (
-                <div className="border-t border-gray-800 p-3 space-y-3">
-                  {item.codeUrl && (
-                    <a
-                      href={item.codeUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-blue-400 hover:underline block"
-                    >
-                      查看力扣提交详情 ↗
-                    </a>
-                  )}
-
-                  {item.code && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">
-                        提交代码 ({item.language || '未知语言'})
-                      </p>
-                      <pre className="text-xs bg-[#0D1117] border border-gray-700 rounded p-2 overflow-x-auto max-h-48 text-gray-300 font-mono whitespace-pre">
-                        {item.code}
-                      </pre>
-                    </div>
-                  )}
-
-                  {item.noteContent && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">笔记</p>
-                      <pre className="text-xs bg-[#0D1117] border border-gray-700 rounded p-2 overflow-x-auto max-h-32 text-gray-300 font-mono whitespace-pre-wrap">
-                        {item.noteContent}
-                      </pre>
-                    </div>
-                  )}
-
-                  {item.mistakeTags.length > 0 && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">错因</p>
-                      <div className="flex gap-1 flex-wrap">
-                        {item.mistakeTags.map((t) => (
-                          <span
-                            key={t}
-                            className="px-2 py-0.5 text-xs rounded-full bg-[#F85149]/20 text-[#F85149]"
-                          >
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                <div className="ml-2 pl-16 pr-3 pb-2">
+                  <BandBars tag={sp.tag} subs={submissions} probs={problems} />
+                  <div className="flex gap-3 mt-1.5 text-[10px] text-[var(--color-text-muted)]">
+                    <span>Elo {sp.currentElo}→{sp.targetElo}</span>
+                    <span>{sp.totalAttempted}次</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -414,8 +147,290 @@ function PopupApp() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <PopupApp />
-  </React.StrictMode>
-);
+// ── 成就通知 ──
+
+function AchievementToast({ badges, onDismiss }: { badges: BadgeDef[]; onDismiss: () => void }) {
+  if (badges.length === 0) return null;
+  return (
+    <div className="toast-enter mb-3 card-sm border-[var(--color-success)]/30 bg-[var(--color-primary-muted)]">
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-1.5">
+          <Award className="w-4 h-4 text-[var(--color-success)]" />
+          <span className="text-xs text-[var(--color-success)] font-semibold">成就解锁!</span>
+        </div>
+        <button onClick={onDismiss} className="text-[var(--color-text-muted)] hover:text-white text-xs px-1">✕</button>
+      </div>
+      {badges.slice(0, 3).map((b) => (
+        <div key={b.id} className="flex items-center gap-2 mt-1.5 text-xs text-[var(--color-text-primary)]">
+          <AchievementIcon badge={b} className="h-5 w-5 shrink-0" />
+          <span className="font-medium">{b.name}</span>
+          <span className="text-[var(--color-text-muted)]">{b.description}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── 今日聚焦 ──
+
+function DailyFocus({ recs }: { recs: TagRecommendation[] }) {
+  if (recs.length === 0) return null;
+  return (
+    <div className="card-sm mb-3 border-[var(--color-warning)]/25">
+      <div className="flex items-center gap-1.5 mb-2">
+        <TrendingUp className="w-3.5 h-3.5 text-[var(--color-warning)]" />
+        <span className="text-xs font-semibold text-[var(--color-warning)]">今日聚焦</span>
+      </div>
+      <div className="space-y-1.5">
+        {recs.slice(0, 3).map((rec) => (
+          <div key={rec.tag} className="flex items-center gap-2 text-[11px]">
+            <span className="font-medium text-[var(--color-text-primary)] w-16 truncate shrink-0">{rec.label}</span>
+            <EloBar current={rec.currentElo} target={rec.targetElo} />
+            <span className="text-[var(--color-text-muted)] text-[10px] text-right">{rec.reason}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── 主应用 ──
+
+function PopupApp() {
+  const skillProfiles = useLiveQuery(() => db.skillProfiles.toArray()) || [];
+  const allSubs = useLiveQuery(() => db.submissions.orderBy('timestamp').reverse().toArray()) || [];
+  const recentSubs = allSubs.slice(0, 20);
+  const problems = useLiveQuery(() => db.problems.toArray()) || [];
+  const notes = useLiveQuery(() => db.notes.toArray()) || [];
+
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [duReviewCount, setDueReviewCount] = useState(0);
+  const [newBadges, setNewBadges] = useState<BadgeDef[]>([]);
+  const [showBadges, setShowBadges] = useState(true);
+  const [targetCompId, setTargetCompId] = useState<string>('lanqiao');
+
+  useEffect(() => {
+    getDueReviewCount().then(setDueReviewCount);
+    chrome.storage.local.get(['targetCompetition'], (result) => {
+      if (typeof result.targetCompetition === 'string') setTargetCompId(result.targetCompetition);
+    });
+    db.achievements.where('notified').equals(0).toArray().then((as) => {
+      if (as.length > 0) {
+        import('../lib/achievements').then(({ ALL_BADGES, markNotified }) => {
+          const badges = as.map((a) => ALL_BADGES.find((b) => b.id === a.id)).filter(Boolean) as BadgeDef[];
+          setNewBadges(badges);
+          for (const a of as) markNotified(a.id);
+        });
+      }
+    });
+  }, []);
+
+  const handleCompChange = (compId: string) => {
+    setTargetCompId(compId);
+    chrome.storage.local.set({ targetCompetition: compId });
+  };
+
+  const globalRating = useMemo(() => {
+    const g = skillProfiles.find((p) => p.tag === 'global');
+    return g ? Math.round(g.rating) : 1500;
+  }, [skillProfiles]);
+
+  const recommendations = useMemo(() => {
+    if (skillProfiles.length === 0 || allSubs.length === 0) return [];
+    return getDailyRecommendations(skillProfiles, allSubs, problems, targetCompId);
+  }, [skillProfiles, allSubs, problems, targetCompId]);
+
+  const dailyStats = useMemo(() => {
+    const map = new Map<string, { count: number; acCount: number }>();
+    for (const s of allSubs) {
+      const ds = new Date(s.timestamp * 1000).toISOString().slice(0, 10);
+      const entry = map.get(ds) || { count: 0, acCount: 0 };
+      entry.count++;
+      if (s.verdict === 'AC') entry.acCount++;
+      map.set(ds, entry);
+    }
+    return Array.from(map.entries()).map(([date, v]) => ({ date, ...v }));
+  }, [allSubs]);
+
+  const recentItems = useMemo(() => {
+    const noteMap = new Map<string, Note>();
+    for (const n of notes) noteMap.set(n.problemId, n);
+    const probMap = new Map<string, Problem>();
+    for (const p of problems) probMap.set(p.id, p);
+    return recentSubs.map((s: Submission) => {
+      const prob = probMap.get(s.problemId);
+      const note = noteMap.get(s.problemId);
+      return {
+        ...s,
+        title: prob?.title || s.problemId.replace(/^(leetcode-cn|nowcoder)_/, ''),
+        url: prob?.url || '#',
+        platformLabel: prob?.platform === 'nowcoder' ? '牛客' : 'LC',
+        noteContent: note?.markdownContent || '',
+        mistakeTags: note?.mistakeTags || [],
+      };
+    });
+  }, [recentSubs, problems, notes]);
+
+  const stats = useMemo(() => {
+    const ac = allSubs.filter((s) => s.verdict === 'AC').length;
+    const total = allSubs.length || 1;
+    const today = new Date().toISOString().slice(0, 10);
+    const todayCount = allSubs.filter((s) => new Date(s.timestamp).toISOString().slice(0, 10) === today).length;
+    const weekCount = allSubs.filter((s) => s.timestamp >= Date.now() - 7 * 86400000).length;
+    const solved = new Set(allSubs.filter((s) => s.verdict === 'AC').map((s) => s.problemId)).size;
+    const daySet = new Set<string>();
+    for (const s of allSubs) daySet.add(new Date(s.timestamp).toISOString().slice(0, 10));
+    const sorted = [...daySet].sort().reverse();
+    let streak = 0;
+    if (sorted.length > 0) {
+      const todayStr = today;
+      const yestStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      if (sorted[0] === todayStr || sorted[0] === yestStr) {
+        streak = 1;
+        for (let i = 1; i < sorted.length; i++) {
+          const diff = (new Date(sorted[i - 1]).getTime() - new Date(sorted[i]).getTime()) / 86400000;
+          if (Math.abs(diff - 1) < 0.1) streak++; else break;
+        }
+      }
+    }
+    const efficiency = solved > 0 ? (ac / solved).toFixed(1) : '0';
+    return { ac, total, rate: Math.round((ac / total) * 100), todayCount, weekCount, solved, streak, efficiency };
+  }, [allSubs]);
+
+  const toggleExpand = (id: string) => { setExpanded((prev) => (prev === id ? null : id)); };
+
+  const verBadge = (v: string) => {
+    const cls = v === 'AC' ? 'badge-ac' : v === 'TLE' ? 'badge-tle' : 'badge-wa';
+    return <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${cls}`}>{v}</span>;
+  };
+
+  return (
+    <div className="p-3 w-[400px] bg-[var(--color-bg-base)] text-[var(--color-text-primary)] font-sans leading-relaxed">
+      {/* ═══ 头部 ═══ */}
+      <div className="mb-3 pb-3 border-b border-[var(--color-border-muted)]">
+        <div className="flex items-start justify-between mb-2">
+          <div>
+            <h1 className="text-base font-bold text-[var(--color-primary)] flex items-center gap-1.5">
+              <LayoutDashboard className="w-4 h-4" />AlgoTracker
+            </h1>
+            <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">精准攻克薄弱点</p>
+          </div>
+          <a href="/options.html" target="_blank" rel="noreferrer"
+            className="text-[10px] flex items-center gap-1 bg-[var(--color-bg-overlay)] hover:bg-[var(--color-border-default)] text-[var(--color-text-secondary)] px-2 py-1 rounded-md transition-colors">
+            控制台 <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+
+        {/* 比赛选择器 */}
+        <div className="flex gap-1 mb-2 flex-wrap">
+          {COMPETITIONS.map((comp) => (
+            <button key={comp.id} onClick={() => handleCompChange(comp.id)}
+              className={`comp-tab ${targetCompId === comp.id ? 'active' : ''}`}>
+              {comp.name}
+            </button>
+          ))}
+        </div>
+
+        {/* KPI */}
+        <div className="grid grid-cols-4 gap-1.5 mb-2">
+          {[
+            { label: 'AC/总数', value: stats.ac, sub: `/${stats.total}`, color: 'var(--color-success)' },
+            { label: '已解题', value: stats.solved, sub: '', color: 'var(--color-info)' },
+            { label: 'Rating', value: globalRating, sub: '', color: 'var(--color-warning)' },
+            { label: '效率', value: stats.efficiency, sub: '次/题', color: 'var(--color-info)' },
+          ].map((k) => (
+            <div key={k.label} className="card-sm flex flex-col items-center">
+              <span className="kpi-label">{k.label}</span>
+              <span className="kpi-value" style={{ color: k.color }}>
+                {k.value}<span className="text-[10px] font-normal text-[var(--color-text-muted)]">{k.sub}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* 活动统计 */}
+        <div className="flex justify-between px-1 text-[10px] text-[var(--color-text-muted)]">
+          <span className="flex items-center gap-1"><Activity className="w-3 h-3 text-[var(--color-info)]" />今日 <b className="text-[var(--color-text-primary)]">{stats.todayCount}</b></span>
+          <span className="flex items-center gap-1"><Calendar className="w-3 h-3 text-[var(--color-accent)]" />本周 <b className="text-[var(--color-text-primary)]">{stats.weekCount}</b></span>
+          <span className="flex items-center gap-1"><Flame className="w-3 h-3 text-[var(--color-warning)]" />连续 <b className="text-[var(--color-text-primary)]">{stats.streak}</b></span>
+          {duReviewCount > 0 && (
+            <span className="flex items-center gap-1"><BookOpen className="w-3 h-3 text-yellow-400" />复习 <b className="text-yellow-400">{duReviewCount}</b></span>
+          )}
+        </div>
+
+        {/* Cloud sync */}
+        <SyncButton />
+      </div>
+
+      {/* ═══ 成就通知 ═══ */}
+      {showBadges && newBadges.length > 0 && <AchievementToast badges={newBadges} onDismiss={() => setShowBadges(false)} />}
+
+      {/* ═══ 今日聚焦 ═══ */}
+      <DailyFocus recs={recommendations} />
+
+      {/* ═══ 能力评估 ═══ */}
+      <SkillPanel skillProfiles={skillProfiles} submissions={allSubs} problems={problems} targetCompId={targetCompId} />
+
+      {/* ═══ 提交热力图 ═══ */}
+      <Heatmap dailyStats={dailyStats} />
+
+      {/* ═══ 最近提交 ═══ */}
+      <div>
+        <h2 className="section-label mb-2">最近提交</h2>
+        {recentItems.length === 0 ? (
+          <div className="card empty-state py-6"><Activity className="w-8 h-8 mb-2 opacity-30" /><p className="text-xs">去力扣或牛客网提交一道题吧</p></div>
+        ) : (
+          <div className="space-y-1 max-h-72 overflow-y-auto custom-scrollbar">
+            {recentItems.map((item) => {
+              const isOpen = expanded === item.id;
+              return (
+                <div key={item.id} className="card-sm overflow-hidden">
+                  <button onClick={() => toggleExpand(item.id)}
+                    className="w-full text-left flex items-center gap-2 row-hover -m-1.5 p-1.5 rounded">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        {verBadge(item.verdict)}
+                        <span className="platform-chip">{item.platformLabel}</span>
+                        <span className="text-xs font-medium text-[var(--color-text-primary)] truncate">{item.title}</span>
+                      </div>
+                      <div className="flex gap-2 text-[10px] text-[var(--color-text-muted)] mt-0.5">
+                        {item.language && <span>{item.language}</span>}
+                        {item.runtimeStr && <span>{item.runtimeStr}</span>}
+                        <span>{new Date(item.timestamp).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    </div>
+                    <span className="text-[var(--color-text-muted)] shrink-0">{isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}</span>
+                  </button>
+                  {isOpen && (
+                    <div className="border-t border-[var(--color-border-muted)] mt-2 pt-2 space-y-2">
+                      {item.codeUrl && <a href={item.codeUrl} target="_blank" rel="noreferrer" className="text-[10px] text-[var(--color-info)] hover:underline block">查看提交详情 ↗</a>}
+                      {item.code && (
+                        <div>
+                          <p className="text-[10px] text-[var(--color-text-muted)] mb-1">代码 ({item.language || '--'})</p>
+                          <pre className="text-[10px] bg-[var(--color-bg-base)] border border-[var(--color-border-muted)] rounded p-2 overflow-x-auto max-h-32 text-[var(--color-text-secondary)] font-mono whitespace-pre leading-snug">{item.code}</pre>
+                        </div>
+                      )}
+                      {item.noteContent && (
+                        <div>
+                          <p className="text-[10px] text-[var(--color-text-muted)] mb-1">笔记</p>
+                          <pre className="text-[10px] bg-[var(--color-bg-base)] border border-[var(--color-border-muted)] rounded p-2 overflow-x-auto max-h-24 text-[var(--color-text-secondary)] font-mono whitespace-pre-wrap leading-snug">{item.noteContent}</pre>
+                        </div>
+                      )}
+                      {item.mistakeTags.length > 0 && (
+                        <div className="flex gap-1 flex-wrap">
+                          {item.mistakeTags.map((t) => <span key={t} className="px-1.5 py-0.5 text-[10px] rounded-full badge-wa">{t}</span>)}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><PopupApp /></React.StrictMode>);
