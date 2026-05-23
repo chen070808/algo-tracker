@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">首破困难</title>
+  <defs>
+    <linearGradient id="bg" x1="18" y1="110" x2="110" y2="18" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#422006"/>
+      <stop offset="0.55" stop-color="#CA8A04"/>
+      <stop offset="1" stop-color="#FEF08A"/>
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="58" fill="#0D1117"/>
+  <circle cx="64" cy="64" r="52" fill="url(#bg)"/>
+  <path d="M72 20L32 72h28l-7 36 43-57H69l3-31Z" fill="#FEF08A" stroke="#FFFBEB" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M37 103h54" stroke="#FEF3C7" stroke-width="7" stroke-linecap="round"/>
+  <text x="64" y="93" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="900" fill="#422006">HARD</text>
+</svg>

@@ -259,14 +259,16 @@
     }
   }
 
-  function clearDedupCache() {
-    // Clear in-memory
+  function clearDedupCache(slug) {
+    // 只清除当前题目的去重记录，不清其他题目的
+    const prefix = slug ? DEDUP_STORAGE_PREFIX + slug + '::' : '';
     for (const k of Object.keys(processedKeys)) {
-      delete processedKeys[k];
+      if (!slug || k.startsWith(slug + '::')) delete processedKeys[k];
     }
-    // Clear sessionStorage dedup entries
     for (const k of Object.keys(sessionStorage)) {
-      if (k.startsWith(DEDUP_STORAGE_PREFIX)) sessionStorage.removeItem(k);
+      if (k.startsWith(DEDUP_STORAGE_PREFIX) && (!slug || k.startsWith(prefix))) {
+        sessionStorage.removeItem(k);
+      }
     }
   }
 
@@ -276,7 +278,7 @@
 
   let detectionLock = false;
 
-  async function detectAndDispatch(source) {
+  function detectAndDispatch(source) {
     if (detectionLock) return;
     detectionLock = true;
 
@@ -295,12 +297,6 @@
       markProcessed(slug, verdict);
       stopPolling();
 
-      // 短暂延迟后重读 identity，捕获 LeetCode 跳转后的 submission ID
-      await new Promise(r => setTimeout(r, 500));
-      const { slug: slug2, submissionId: idAfterRedirect } = getIdentity();
-      const finalSlug = slug2 || slug;
-      const finalId = idAfterRedirect || submissionId;
-
       const code = getMonacoCode();
       const lang = getCodeLanguage();
       const { runtime, memory } = extractRuntimeMemory(resultEl);
@@ -309,7 +305,7 @@
 
       console.log(
         '[AlgoTracker] 检测到提交结果 (' + source + '):',
-        verdict, '| slug:', finalSlug, '| id:', finalId, '| lang:', lang,
+        verdict, '| slug:', slug, '| lang:', lang,
         '| runtime:', runtime, '| memory:', memory,
         '| difficulty:', difficulty, '| tags:', tags,
         '| code length:', code.length
@@ -319,12 +315,12 @@
         {
           type: 'ALGOTRACKER_SUBMISSION',
           data: {
-            id: finalId,
+            id: submissionId,
             status_display: verdict,
             lang: lang,
             runtime: runtime,
             memory: memory,
-            titleSlug: finalSlug,
+            titleSlug: slug,
             code: code,
             difficulty: difficulty,
             tags: tags,
@@ -430,7 +426,7 @@
           if (el && isSubmitButton(el)) {
             console.log('[AlgoTracker] 检测到 Submit 按钮点击');
             // Clear previous dedup cache so re-submission of same problem works
-            clearDedupCache();
+            clearDedupCache(getIdentity().slug);
             // Start polling (result will appear after judge queue)
             startPolling();
             return;
@@ -450,7 +446,7 @@
     function (e) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         console.log('[AlgoTracker] 检测到键盘快捷键提交');
-        clearDedupCache();
+        clearDedupCache(getIdentity().slug);
         startPolling();
       }
     },

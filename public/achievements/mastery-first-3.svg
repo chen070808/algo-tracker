@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">初次掌握</title>
+  <defs>
+    <linearGradient id="bg" x1="18" y1="110" x2="110" y2="18" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1E1B4B"/>
+      <stop offset="0.55" stop-color="#4F46E5"/>
+      <stop offset="1" stop-color="#C4B5FD"/>
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="58" fill="#0D1117"/>
+  <circle cx="64" cy="64" r="52" fill="url(#bg)"/>
+  <path d="M64 25l10 25 27 2-21 17 7 27-23-15-23 15 7-27-21-17 27-2 10-25Z" fill="#FDE68A" stroke="#FFFBEB" stroke-width="5" stroke-linejoin="round"/>
+  <circle cx="64" cy="64" r="22" fill="#111827" stroke="#C4B5FD" stroke-width="4"/>
+  <text x="64" y="75" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="31" font-weight="900" fill="#FDE68A">3</text>
+  <path d="M38 105h52" stroke="#E0E7FF" stroke-width="6" stroke-linecap="round"/>
+</svg>

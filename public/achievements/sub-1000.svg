@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">千题大师</title>
+  <defs>
+    <linearGradient id="bg" x1="18" y1="110" x2="110" y2="18" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#581C87"/>
+      <stop offset="0.55" stop-color="#A855F7"/>
+      <stop offset="1" stop-color="#FDE68A"/>
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="58" fill="#0D1117"/>
+  <circle cx="64" cy="64" r="52" fill="url(#bg)"/>
+  <path d="M31 49l19 17 14-30 14 30 19-17-8 45H39l-8-45Z" fill="#FEF3C7" stroke="#FFFBEB" stroke-width="5" stroke-linejoin="round"/>
+  <circle cx="31" cy="48" r="7" fill="#FBBF24" stroke="#FFFBEB" stroke-width="3"/>
+  <circle cx="64" cy="35" r="7" fill="#FBBF24" stroke="#FFFBEB" stroke-width="3"/>
+  <circle cx="97" cy="48" r="7" fill="#FBBF24" stroke="#FFFBEB" stroke-width="3"/>
+  <rect x="34" y="87" width="60" height="25" rx="7" fill="#111827" stroke="#FDE68A" stroke-width="3"/>
+  <text x="64" y="105" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="900" fill="#FEF3C7">1000</text>
+</svg>

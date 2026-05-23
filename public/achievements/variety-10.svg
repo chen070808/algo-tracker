@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">十项全能</title>
+  <defs>
+    <linearGradient id="bg" x1="18" y1="110" x2="110" y2="18" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7F1D1D"/>
+      <stop offset="0.25" stop-color="#EA580C"/>
+      <stop offset="0.5" stop-color="#16A34A"/>
+      <stop offset="0.75" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#9333EA"/>
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="58" fill="#0D1117"/>
+  <circle cx="64" cy="64" r="52" fill="url(#bg)"/>
+  <path d="M31 84c0-19 15-34 33-34s33 15 33 34" fill="none" stroke="#F8FAFC" stroke-width="10" stroke-linecap="round"/>
+  <path d="M39 84c0-14 11-25 25-25s25 11 25 25" fill="none" stroke="#111827" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="64" cy="85" r="22" fill="#F8FAFC" stroke="#E0E7FF" stroke-width="4"/>
+  <text x="64" y="94" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="900" fill="#1F2937">10</text>
+  <path d="M32 96h64" stroke="#F8FAFC" stroke-width="6" stroke-linecap="round"/>
+</svg>

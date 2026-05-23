@@ -5,8 +5,9 @@ export interface Problem {
   platform: string;
   title: string;
   url: string;
-  rating: number; 
+  rating: number;
   tags: string[];
+  unifiedTopics: string[]; // cross-platform normalized topic IDs
 }
 
 export interface Submission {
@@ -31,6 +32,16 @@ export interface SkillProfile {
   totalAC: number;
 }
 
+export interface Achievement {
+  id: string;
+  unlockedAt: number;
+  notified: boolean;
+}
+
+export interface AchievementState {
+  achievements: Achievement[];
+}
+
 export interface Note {
   problemId: string;
   markdownContent: string;
@@ -51,15 +62,24 @@ export class AlgoTrackerDB extends Dexie {
   skillProfiles!: Table<SkillProfile>;
   notes!: Table<Note>;
   reviews!: Table<ReviewSchedule>;
+  achievements!: Table<Achievement>;
 
   constructor() {
     super('AlgoTrackerDB');
     this.version(1).stores({
-      problems: 'id, platform, rating, *tags', // Primary key and indexed props
+      problems: 'id, platform, rating, *tags',
       submissions: 'id, problemId, timestamp, verdict',
       skillProfiles: 'tag, rating, lastPracticedAt',
       notes: 'problemId, lastUpdatedAt',
-      reviews: 'problemId, nextReviewAt, stage'
+      reviews: 'problemId, nextReviewAt, stage',
+    });
+    this.version(2).stores({
+      problems: 'id, platform, rating, *tags, *unifiedTopics',
+      submissions: 'id, problemId, timestamp, verdict',
+      skillProfiles: 'tag, rating, lastPracticedAt, masteryLevel',
+      notes: 'problemId, lastUpdatedAt',
+      reviews: 'problemId, nextReviewAt, stage',
+      achievements: 'id, unlockedAt',
     });
   }
 }

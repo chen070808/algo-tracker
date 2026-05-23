@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">五百题</title>
+  <defs>
+    <linearGradient id="bg" x1="21" y1="107" x2="107" y2="21" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#064E3B"/>
+      <stop offset="0.55" stop-color="#059669"/>
+      <stop offset="1" stop-color="#A7F3D0"/>
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="58" fill="#0D1117"/>
+  <circle cx="64" cy="64" r="52" fill="url(#bg)"/>
+  <path d="M64 24l37 15v25c0 22-14 38-37 45-23-7-37-23-37-45V39l37-15Z" fill="#D1FAE5" stroke="#ECFDF5" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M64 33v63c17-7 26-19 26-34V47L64 33Z" fill="#6EE7B7"/>
+  <path d="M45 65l12 12 28-31" fill="none" stroke="#064E3B" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="37" y="87" width="54" height="25" rx="7" fill="#111827" stroke="#A7F3D0" stroke-width="3"/>
+  <text x="64" y="106" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="900" fill="#D1FAE5">500</text>
+</svg>

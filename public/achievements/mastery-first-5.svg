@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">精通领域</title>
+  <defs>
+    <linearGradient id="bg" x1="18" y1="110" x2="110" y2="18" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#083344"/>
+      <stop offset="0.55" stop-color="#0891B2"/>
+      <stop offset="1" stop-color="#A5F3FC"/>
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="58" fill="#0D1117"/>
+  <circle cx="64" cy="64" r="52" fill="url(#bg)"/>
+  <path d="M41 31h46l18 25-41 48-41-48 18-25Z" fill="#CFFAFE" stroke="#ECFEFF" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M41 31l23 73 23-73M23 56h82M41 31l-18 25M87 31l18 25" fill="none" stroke="#0E7490" stroke-width="4" stroke-linejoin="round"/>
+  <circle cx="64" cy="62" r="19" fill="#111827" stroke="#A5F3FC" stroke-width="4"/>
+  <text x="64" y="73" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="900" fill="#CFFAFE">5</text>
+</svg>

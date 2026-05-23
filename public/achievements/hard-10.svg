@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">困难克星</title>
+  <defs>
+    <linearGradient id="bg" x1="18" y1="110" x2="110" y2="18" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111827"/>
+      <stop offset="0.55" stop-color="#7F1D1D"/>
+      <stop offset="1" stop-color="#F87171"/>
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="58" fill="#0D1117"/>
+  <circle cx="64" cy="64" r="52" fill="url(#bg)"/>
+  <path d="M64 24c20 0 36 15 36 34 0 15-9 27-23 32v14H51V90C37 85 28 73 28 58c0-19 16-34 36-34Z" fill="#FEE2E2" stroke="#FFF1F2" stroke-width="5" stroke-linejoin="round"/>
+  <circle cx="51" cy="60" r="7" fill="#7F1D1D"/>
+  <circle cx="77" cy="60" r="7" fill="#7F1D1D"/>
+  <path d="M57 78h14M49 101h30" stroke="#7F1D1D" stroke-width="5" stroke-linecap="round"/>
+  <rect x="41" y="86" width="46" height="25" rx="7" fill="#111827" stroke="#FCA5A5" stroke-width="3"/>
+  <text x="64" y="105" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="900" fill="#FEE2E2">10</text>
+</svg>

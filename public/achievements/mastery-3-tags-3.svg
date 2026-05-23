@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">三项全能</title>
+  <defs>
+    <linearGradient id="bg" x1="18" y1="110" x2="110" y2="18" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1F2937"/>
+      <stop offset="0.55" stop-color="#0F766E"/>
+      <stop offset="1" stop-color="#FDE68A"/>
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="58" fill="#0D1117"/>
+  <circle cx="64" cy="64" r="52" fill="url(#bg)"/>
+  <circle cx="64" cy="63" r="36" fill="#111827" stroke="#CCFBF1" stroke-width="5"/>
+  <circle cx="64" cy="63" r="24" fill="none" stroke="#5EEAD4" stroke-width="5"/>
+  <circle cx="64" cy="63" r="10" fill="#FEF3C7"/>
+  <path d="M64 21v20M64 85v21M21 63h20M87 63h20" stroke="#CCFBF1" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="43" cy="42" r="9" fill="#FDE68A" stroke="#FFFBEB" stroke-width="3"/>
+  <circle cx="85" cy="42" r="9" fill="#FDE68A" stroke="#FFFBEB" stroke-width="3"/>
+  <circle cx="64" cy="91" r="9" fill="#FDE68A" stroke="#FFFBEB" stroke-width="3"/>
+</svg>

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">连续7天</title>
+  <defs>
+    <linearGradient id="bg" x1="24" y1="112" x2="104" y2="16" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7C2D12"/>
+      <stop offset="0.55" stop-color="#EA580C"/>
+      <stop offset="1" stop-color="#FACC15"/>
+    </linearGradient>
+    <linearGradient id="flame" x1="64" y1="99" x2="64" y2="25" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FEF08A"/>
+      <stop offset="0.45" stop-color="#FB923C"/>
+      <stop offset="1" stop-color="#DC2626"/>
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="58" fill="#0D1117"/>
+  <circle cx="64" cy="64" r="52" fill="url(#bg)"/>
+  <path d="M36 96c-5-10-5-25 2-36 7-12 17-15 18-32 12 8 14 19 12 30 7-5 11-11 12-19 12 11 18 25 17 39-1 22-16 35-33 35-12 0-22-6-28-17Z" fill="url(#flame)" stroke="#FFF7ED" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M57 97c-8-8-6-19 3-28 1 8 6 12 12 16 2-5 1-11-1-17 10 7 15 17 12 27-4 12-19 16-26 2Z" fill="#FFF7ED" opacity="0.92"/>
+  <text x="64" y="73" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="800" fill="#7C2D12">7</text>
+  <path d="M29 111h70l8-20H21l8 20Z" fill="#111827" stroke="#FED7AA" stroke-width="3" stroke-linejoin="round"/>
+  <text x="64" y="105" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#FED7AA">STREAK</text>
+</svg>
