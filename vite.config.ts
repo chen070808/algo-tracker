@@ -18,19 +18,36 @@ const manifest = defineManifest({
   },
   content_scripts: [
     {
-      matches: ['*://leetcode.cn/problems/*', '*://leetcode.com/problems/*'],
+      matches: [
+        '*://leetcode.cn/problems/*',
+        '*://leetcode.com/problems/*',
+        '*://www.nowcoder.com/practice/*',
+        '*://www.nowcoder.com/question/*',
+        '*://ac.nowcoder.com/acm/problem/*',
+      ],
       js: ['src/content/index.tsx'],
       run_at: 'document_start'
     }
   ],
   web_accessible_resources: [
     {
-      resources: ['src/content/inject.js'],
-      matches: ['*://leetcode.cn/*', '*://leetcode.com/*']
+      resources: ['src/content/inject.js', 'src/content/nowcoder_inject.js'],
+      matches: [
+        '*://leetcode.cn/*',
+        '*://leetcode.com/*',
+        '*://www.nowcoder.com/*',
+        '*://ac.nowcoder.com/*',
+      ]
     }
   ],
   permissions: ['storage', 'unlimitedStorage'],
-  host_permissions: ['*://leetcode.cn/*', '*://leetcode.com/*', '*://api.github.com/*'],
+  host_permissions: [
+    '*://leetcode.cn/*',
+    '*://leetcode.com/*',
+    '*://www.nowcoder.com/*',
+    '*://ac.nowcoder.com/*',
+    '*://api.github.com/*',
+  ],
 });
 
 export default defineConfig({
