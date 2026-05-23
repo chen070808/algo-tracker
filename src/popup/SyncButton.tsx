@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { getSyncConfig, syncToCloud, saveAuth, clearAuth, type SyncResult } from '../lib/sync';
+import { getSyncConfig, syncToCloud, type SyncResult } from '../lib/sync';
 
 export default function SyncButton() {
   const [isAuth, setIsAuth] = useState(false);

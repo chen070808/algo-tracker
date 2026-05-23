@@ -26,9 +26,9 @@ export interface SyncResult {
 export async function getSyncConfig(): Promise<SyncConfig> {
   const result = await chrome.storage.local.get(['oi_token', 'oi_userId', 'oi_apiBase']);
   return {
-    token: result.oi_token || null,
-    userId: result.oi_userId || null,
-    apiBase: result.oi_apiBase || DEFAULT_API_BASE,
+    token: (result.oi_token as string) || null,
+    userId: (result.oi_userId as string) || null,
+    apiBase: (result.oi_apiBase as string) || DEFAULT_API_BASE,
   };
 }
 
