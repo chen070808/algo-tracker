@@ -5,6 +5,13 @@
  */
 import kgJson from '../data/knowledge-graph.json';
 
+export interface TopicProblem {
+  platform: string;
+  id: string;
+  title: string;
+  difficulty: number;
+}
+
 export interface TopicNode {
   id: string;
   labelCn: string;
@@ -13,22 +20,97 @@ export interface TopicNode {
   difficulty: number;
   keywords: string[];
   prerequisites: string[];
+  related: string[];
+  problems: TopicProblem[];
+  article: string;
 }
 
 function buildTopicNodes(): TopicNode[] {
-  return Object.values(kgJson.nodes).map((n) => ({
+  return Object.values(kgJson.nodes).map((n: any) => ({
     id: n.id,
     labelCn: n.label_cn,
     labelEn: n.label_en,
     category: n.category as TopicNode['category'],
     difficulty: n.difficulty,
     keywords: n.keywords,
-    prerequisites: n.prerequisites,
+    prerequisites: n.prerequisites || [],
+    related: n.related || [],
+    problems: n.problems || [],
+    article: n.article || '',
   }));
 }
 
 export const TOPIC_TAXONOMY: TopicNode[] = buildTopicNodes();
 const TOPIC_MAP = new Map(TOPIC_TAXONOMY.map((t) => [t.id, t]));
+
+export function getTopicNode(topicId: string): TopicNode | undefined {
+  return TOPIC_MAP.get(topicId);
+}
+
+export function getAllTopics(): TopicNode[] {
+  return TOPIC_TAXONOMY;
+}
+
+export function getTopicPrerequisites(topicId: string): TopicNode[] {
+  const node = TOPIC_MAP.get(topicId);
+  if (!node) return [];
+  return node.prerequisites.map((id) => TOPIC_MAP.get(id)).filter(Boolean) as TopicNode[];
+}
+
+export function getRelatedTopics(topicId: string): TopicNode[] {
+  const node = TOPIC_MAP.get(topicId);
+  if (!node) return [];
+  return node.related.map((id) => TOPIC_MAP.get(id)).filter(Boolean) as TopicNode[];
+}
+
+export function getTopicProblems(topicId: string): TopicProblem[] {
+  const node = TOPIC_MAP.get(topicId);
+  return node?.problems || [];
+}
+
+export function getTopicArticle(topicId: string): string {
+  const node = TOPIC_MAP.get(topicId);
+  return node?.article || '';
+}
+
+/**
+ * 获取从基础到目标主题的完整学习路径 (BFS 反向追溯)
+ * 返回按学习顺序排列的主题列表 (基础在前)
+ */
+export function getLearningPath(topicId: string): TopicNode[] {
+  const target = TOPIC_MAP.get(topicId);
+  if (!target) return [];
+
+  const visited = new Set<string>();
+  const result: TopicNode[] = [];
+
+  function collect(node: TopicNode): void {
+    if (visited.has(node.id)) return;
+    visited.add(node.id);
+    for (const prereqId of node.prerequisites) {
+      const prereq = TOPIC_MAP.get(prereqId);
+      if (prereq) collect(prereq);
+    }
+    result.push(node);
+  }
+
+  collect(target);
+  return result;
+}
+
+/**
+ * 获取所有前置知识都已掌握、可以直接学习的主题
+ */
+export function getUnlockedTopics(masteredTopicIds: Set<string>): TopicNode[] {
+  return TOPIC_TAXONOMY.filter((t) => {
+    if (t.prerequisites.length === 0) return true;
+    return t.prerequisites.every((p) => masteredTopicIds.has(p));
+  });
+}
+
+export function getTopicsByCategory(cat: TopicNode['category']): TopicNode[] {
+  return TOPIC_TAXONOMY.filter((t) => t.category === cat);
+}
 
 /**
  * LeetCode 标签 → 统一主题映射 (基于 NOI 2025 大纲节点)
@@ -172,18 +254,4 @@ export function mapToUnifiedTopics(platform: string, rawTags: string[]): string[
     }
   }
   return [...unified];
-}
-
-export function getTopicNode(topicId: string): TopicNode | undefined {
-  return TOPIC_MAP.get(topicId);
-}
-
-export function getAllTopics(): TopicNode[] {
-  return TOPIC_TAXONOMY;
-}
-
-export function getTopicPrerequisites(topicId: string): TopicNode[] {
-  const node = TOPIC_MAP.get(topicId);
-  if (!node) return [];
-  return node.prerequisites.map((id) => TOPIC_MAP.get(id)).filter(Boolean) as TopicNode[];
 }
