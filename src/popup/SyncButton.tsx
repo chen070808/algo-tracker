@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getSyncConfig, syncToCloud, type SyncResult } from '../lib/sync';
 
 export default function SyncButton() {
@@ -7,10 +7,9 @@ export default function SyncButton() {
   const [result, setResult] = useState<SyncResult | null>(null);
   const [error, setError] = useState('');
 
-  // Check auth on mount
-  useState(() => {
+  useEffect(() => {
     getSyncConfig().then((c) => setIsAuth(!!c.token));
-  });
+  }, []);
 
   const handleSync = useCallback(async () => {
     setSyncing(true);
