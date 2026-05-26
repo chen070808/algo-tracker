@@ -27,10 +27,36 @@
       "keywords": [
         "回溯"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "dfs",
+        "recursion"
+      ],
+      "related": [
+        "flood_fill",
+        "bitmask_dp",
+        "iterative_deepening"
+      ],
+      "article": "法/F1_搜索与回溯.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "n-queens",
+          "title": "N皇后",
+          "difficulty": 7
+        },
+        {
+          "platform": "lc",
+          "id": "sudoku-solver",
+          "title": "解数独",
+          "difficulty": 7
+        },
+        {
+          "platform": "lc",
+          "id": "combination-sum",
+          "title": "组合总和",
+          "difficulty": 5
+        }
+      ]
     },
     "balanced_tree": {
       "id": "balanced_tree",
@@ -57,10 +83,37 @@
       "keywords": [
         "BFS"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "queue",
+        "graph"
+      ],
+      "related": [
+        "dfs",
+        "shortest_path",
+        "bidirectional_bfs",
+        "flood_fill"
+      ],
+      "article": "法/F1_搜索与回溯.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "binary-tree-level-order-traversal",
+          "title": "二叉树的层序遍历",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "word-ladder",
+          "title": "单词接龙",
+          "difficulty": 8
+        },
+        {
+          "platform": "lg",
+          "id": "P1443",
+          "title": "马的遍历",
+          "difficulty": 3
+        }
+      ]
     },
     "bidirectional_bfs": {
       "id": "bidirectional_bfs",
@@ -87,10 +140,36 @@
       "keywords": [
         "二叉堆"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "complete_btree"
+      ],
+      "related": [
+        "heap_sort",
+        "mst",
+        "shortest_path",
+        "greedy"
+      ],
+      "article": "术/S4_集合与连通的快速判定.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "kth-largest-element-in-an-array",
+          "title": "数组中的第K个最大元素",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "top-k-frequent-elements",
+          "title": "前K个高频元素",
+          "difficulty": 5
+        },
+        {
+          "platform": "lg",
+          "id": "P3378",
+          "title": "【模板】堆",
+          "difficulty": 3
+        }
+      ]
     },
     "binary_lifting": {
       "id": "binary_lifting",
@@ -117,10 +196,35 @@
       "keywords": [
         "二分查找"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "sorting"
+      ],
+      "related": [
+        "divide_conquer",
+        "greedy",
+        "sqrt_decomposition"
+      ],
+      "article": "法/F0_基础算法与构造.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "binary-search",
+          "title": "二分查找",
+          "difficulty": 1
+        },
+        {
+          "platform": "lc",
+          "id": "search-in-rotated-sorted-array",
+          "title": "搜索旋转排序数组",
+          "difficulty": 5
+        },
+        {
+          "platform": "lg",
+          "id": "P1873",
+          "title": "砍树",
+          "difficulty": 3
+        }
+      ]
     },
     "binary_tree": {
       "id": "binary_tree",
@@ -132,10 +236,37 @@
       "keywords": [
         "二叉树"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "tree"
+      ],
+      "related": [
+        "bst",
+        "complete_btree",
+        "lca",
+        "segment_tree",
+        "fenwick"
+      ],
+      "article": "术/S1_线性结构与树的极致压榨.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "binary-tree-inorder-traversal",
+          "title": "二叉树的中序遍历",
+          "difficulty": 1
+        },
+        {
+          "platform": "lc",
+          "id": "lowest-common-ancestor-of-a-binary-tree",
+          "title": "二叉树的最近公共祖先",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "serialize-and-deserialize-binary-tree",
+          "title": "二叉树的序列化与反序列化",
+          "difficulty": 7
+        }
+      ]
     },
     "bipartite_graph": {
       "id": "bipartite_graph",
@@ -252,10 +383,37 @@
       "keywords": [
         "组合数学"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "permutation",
+        "combination"
+      ],
+      "related": [
+        "inclusion_exclusion",
+        "catalan",
+        "probability",
+        "generating_function"
+      ],
+      "article": "法/F4_数学与数论.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "unique-paths",
+          "title": "不同路径",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "letter-combinations-of-a-phone-number",
+          "title": "电话号码的字母组合",
+          "difficulty": 5
+        },
+        {
+          "platform": "lg",
+          "id": "P3807",
+          "title": "【模板】卢卡斯定理",
+          "difficulty": 5
+        }
+      ]
     },
     "complete_btree": {
       "id": "complete_btree",
@@ -342,10 +500,38 @@
       "keywords": [
         "DFS"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "recursion",
+        "stack"
+      ],
+      "related": [
+        "bfs",
+        "backtracking",
+        "flood_fill",
+        "tree_dp",
+        "topological_sort"
+      ],
+      "article": "法/F1_搜索与回溯.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "permutations",
+          "title": "全排列",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "subsets",
+          "title": "子集",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "path-sum",
+          "title": "路径总和",
+          "difficulty": 1
+        }
+      ]
     },
     "difference_array": {
       "id": "difference_array",
@@ -387,10 +573,36 @@
       "keywords": [
         "并查集"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "tree",
+        "graph"
+      ],
+      "related": [
+        "mst",
+        "scc",
+        "lca"
+      ],
+      "article": "术/S4_集合与连通的快速判定.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "number-of-provinces",
+          "title": "省份数量",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "redundant-connection",
+          "title": "冗余连接",
+          "difficulty": 5
+        },
+        {
+          "platform": "lg",
+          "id": "P3367",
+          "title": "【模板】并查集",
+          "difficulty": 3
+        }
+      ]
     },
     "divide_conquer": {
       "id": "divide_conquer",
@@ -402,10 +614,36 @@
       "keywords": [
         "分治"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "recursion"
+      ],
+      "related": [
+        "merge_sort",
+        "quick_sort",
+        "sqrt_decomposition",
+        "segment_tree"
+      ],
+      "article": "道/D2_分而治之的物理投影.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "merge-k-sorted-lists",
+          "title": "合并K个升序链表",
+          "difficulty": 7
+        },
+        {
+          "platform": "lc",
+          "id": "maximum-subarray",
+          "title": "最大子数组和",
+          "difficulty": 5
+        },
+        {
+          "platform": "lg",
+          "id": "P1908",
+          "title": "逆序对",
+          "difficulty": 5
+        }
+      ]
     },
     "divisibility": {
       "id": "divisibility",
@@ -432,10 +670,45 @@
       "keywords": [
         "动态规划"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "recursion",
+        "memoization"
+      ],
+      "related": [
+        "knapsack",
+        "interval_dp",
+        "tree_dp",
+        "bitmask_dp",
+        "greedy",
+        "prefix_sum"
+      ],
+      "article": "法/F2_动态规划的灵魂四问.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "climbing-stairs",
+          "title": "爬楼梯",
+          "difficulty": 1
+        },
+        {
+          "platform": "lc",
+          "id": "house-robber",
+          "title": "打家劫舍",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "longest-increasing-subsequence",
+          "title": "最长递增子序列",
+          "difficulty": 5
+        },
+        {
+          "platform": "lg",
+          "id": "P1216",
+          "title": "数字三角形",
+          "difficulty": 3
+        }
+      ]
     },
     "dp_optimization": {
       "id": "dp_optimization",
@@ -522,10 +795,35 @@
       "keywords": [
         "树状数组"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "prefix_sum",
+        "binary_tree"
+      ],
+      "related": [
+        "segment_tree",
+        "difference_array"
+      ],
+      "article": "术/S3_区间操作的降维打击.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "range-sum-query-mutable",
+          "title": "区域和检索-数组可修改",
+          "difficulty": 5
+        },
+        {
+          "platform": "lg",
+          "id": "P3374",
+          "title": "【模板】树状数组 1",
+          "difficulty": 5
+        },
+        {
+          "platform": "lg",
+          "id": "P3368",
+          "title": "【模板】树状数组 2",
+          "difficulty": 5
+        }
+      ]
     },
     "fermat_little": {
       "id": "fermat_little",
@@ -658,9 +956,37 @@
         "图"
       ],
       "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "related": [
+        "tree",
+        "dag",
+        "bipartite_graph",
+        "bfs",
+        "disjoint_set",
+        "mst",
+        "shortest_path",
+        "topological_sort"
+      ],
+      "article": "法/F3_图论建模.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "number-of-islands",
+          "title": "岛屿数量",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "course-schedule",
+          "title": "课程表",
+          "difficulty": 5
+        },
+        {
+          "platform": "lg",
+          "id": "P3916",
+          "title": "图的遍历",
+          "difficulty": 3
+        }
+      ]
     },
     "greedy": {
       "id": "greedy",
@@ -672,10 +998,35 @@
       "keywords": [
         "贪心"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "sorting"
+      ],
+      "related": [
+        "dp",
+        "mst",
+        "binary_search"
+      ],
+      "article": "法/F5_贪心算法.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "jump-game",
+          "title": "跳跃游戏",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "assign-cookies",
+          "title": "分发饼干",
+          "difficulty": 1
+        },
+        {
+          "platform": "lg",
+          "id": "P1090",
+          "title": "合并果子",
+          "difficulty": 3
+        }
+      ]
     },
     "group_theory": {
       "id": "group_theory",
@@ -703,9 +1054,27 @@
         "哈希表"
       ],
       "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "related": [
+        "trie",
+        "two_pointers",
+        "sliding_window",
+        "memoization"
+      ],
+      "article": "术/S5_字符串匹配的自动机.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "two-sum",
+          "title": "两数之和",
+          "difficulty": 1
+        },
+        {
+          "platform": "lc",
+          "id": "longest-substring-without-repeating-characters",
+          "title": "无重复字符的最长子串",
+          "difficulty": 5
+        }
+      ]
     },
     "heap_sort": {
       "id": "heap_sort",
@@ -807,10 +1176,35 @@
       "keywords": [
         "区间DP"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "dp"
+      ],
+      "related": [
+        "knapsack",
+        "tree_dp",
+        "divide_conquer"
+      ],
+      "article": "法/F2_动态规划的灵魂四问.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "burst-balloons",
+          "title": "戳气球",
+          "difficulty": 7
+        },
+        {
+          "platform": "lc",
+          "id": "minimum-cost-to-merge-stones",
+          "title": "合并石头的最低成本",
+          "difficulty": 8
+        },
+        {
+          "platform": "lg",
+          "id": "P1880",
+          "title": "石子合并",
+          "difficulty": 5
+        }
+      ]
     },
     "iterative_deepening": {
       "id": "iterative_deepening",
@@ -837,10 +1231,35 @@
       "keywords": [
         "KMP"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "two_pointers"
+      ],
+      "related": [
+        "ac_automaton",
+        "trie",
+        "suffix_array"
+      ],
+      "article": "术/S5_字符串匹配的自动机.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "find-the-index-of-the-first-occurrence-in-a-string",
+          "title": "找出字符串中第一个匹配项的下标",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "shortest-palindrome",
+          "title": "最短回文串",
+          "difficulty": 7
+        },
+        {
+          "platform": "lg",
+          "id": "P3375",
+          "title": "【模板】KMP",
+          "difficulty": 3
+        }
+      ]
     },
     "knapsack": {
       "id": "knapsack",
@@ -852,10 +1271,41 @@
       "keywords": [
         "背包问题"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "dp"
+      ],
+      "related": [
+        "interval_dp",
+        "bitmask_dp",
+        "greedy"
+      ],
+      "article": "法/F2_动态规划的灵魂四问.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "partition-equal-subset-sum",
+          "title": "分割等和子集",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "coin-change",
+          "title": "零钱兑换",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "last-stone-weight-ii",
+          "title": "最后一块石头的重量II",
+          "difficulty": 5
+        },
+        {
+          "platform": "lg",
+          "id": "P1048",
+          "title": "采药",
+          "difficulty": 3
+        }
+      ]
     },
     "lca": {
       "id": "lca",
@@ -898,9 +1348,32 @@
         "链表"
       ],
       "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "related": [
+        "stack",
+        "queue",
+        "tree"
+      ],
+      "article": "术/S1_线性结构与树的极致压榨.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "reverse-linked-list",
+          "title": "反转链表",
+          "difficulty": 1
+        },
+        {
+          "platform": "lc",
+          "id": "merge-two-sorted-lists",
+          "title": "合并两个有序链表",
+          "difficulty": 1
+        },
+        {
+          "platform": "lc",
+          "id": "lru-cache",
+          "title": "LRU缓存",
+          "difficulty": 5
+        }
+      ]
     },
     "matrix": {
       "id": "matrix",
@@ -927,10 +1400,29 @@
       "keywords": [
         "记忆化搜索"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "recursion"
+      ],
+      "related": [
+        "dp",
+        "dfs",
+        "hash_table"
+      ],
+      "article": "法/F2_动态规划的灵魂四问.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "longest-increasing-path-in-a-matrix",
+          "title": "矩阵中的最长递增路径",
+          "difficulty": 7
+        },
+        {
+          "platform": "lc",
+          "id": "word-break-ii",
+          "title": "单词拆分II",
+          "difficulty": 7
+        }
+      ]
     },
     "merge_sort": {
       "id": "merge_sort",
@@ -1002,10 +1494,29 @@
       "keywords": [
         "单调队列"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "queue"
+      ],
+      "related": [
+        "monotonic_stack",
+        "sliding_window",
+        "binary_heap"
+      ],
+      "article": "术/S2_单调栈与单调队列.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "sliding-window-maximum",
+          "title": "滑动窗口最大值",
+          "difficulty": 7
+        },
+        {
+          "platform": "lc",
+          "id": "jump-game-vi",
+          "title": "跳跃游戏VI",
+          "difficulty": 5
+        }
+      ]
     },
     "monotonic_stack": {
       "id": "monotonic_stack",
@@ -1017,10 +1528,34 @@
       "keywords": [
         "单调栈"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "stack"
+      ],
+      "related": [
+        "monotonic_queue",
+        "two_pointers"
+      ],
+      "article": "术/S2_单调栈与单调队列.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "daily-temperatures",
+          "title": "每日温度",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "largest-rectangle-in-histogram",
+          "title": "柱状图中最大的矩形",
+          "difficulty": 7
+        },
+        {
+          "platform": "lc",
+          "id": "next-greater-element-i",
+          "title": "下一个更大元素I",
+          "difficulty": 1
+        }
+      ]
     },
     "mst": {
       "id": "mst",
@@ -1032,10 +1567,31 @@
       "keywords": [
         "最小生成树"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "graph",
+        "disjoint_set",
+        "binary_heap"
+      ],
+      "related": [
+        "shortest_path",
+        "greedy",
+        "network_flow"
+      ],
+      "article": "法/F3_图论建模.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "min-cost-to-connect-all-points",
+          "title": "连接所有点的最小费用",
+          "difficulty": 5
+        },
+        {
+          "platform": "lg",
+          "id": "P3366",
+          "title": "【模板】最小生成树",
+          "difficulty": 3
+        }
+      ]
     },
     "network_flow": {
       "id": "network_flow",
@@ -1153,9 +1709,34 @@
         "前缀和"
       ],
       "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "related": [
+        "difference_array",
+        "dp",
+        "fenwick",
+        "sliding_window",
+        "segment_tree"
+      ],
+      "article": "术/S1_线性结构与树的极致压榨.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "range-sum-query-immutable",
+          "title": "区域和检索-数组不可变",
+          "difficulty": 1
+        },
+        {
+          "platform": "lc",
+          "id": "subarray-sum-equals-k",
+          "title": "和为K的子数组",
+          "difficulty": 5
+        },
+        {
+          "platform": "lg",
+          "id": "P8214",
+          "title": "前缀和",
+          "difficulty": 3
+        }
+      ]
     },
     "prime_sieve": {
       "id": "prime_sieve",
@@ -1197,10 +1778,30 @@
       "keywords": [
         "队列"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "linked_list"
+      ],
+      "related": [
+        "stack",
+        "monotonic_queue",
+        "bfs",
+        "sliding_window"
+      ],
+      "article": "术/S1_线性结构与树的极致压榨.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "implement-queue-using-stacks",
+          "title": "用栈实现队列",
+          "difficulty": 1
+        },
+        {
+          "platform": "lc",
+          "id": "design-circular-queue",
+          "title": "设计循环队列",
+          "difficulty": 5
+        }
+      ]
     },
     "quick_sort": {
       "id": "quick_sort",
@@ -1243,9 +1844,34 @@
         "递归"
       ],
       "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "related": [
+        "divide_conquer",
+        "backtracking",
+        "dfs",
+        "dp",
+        "memoization"
+      ],
+      "article": "法/F1_搜索与回溯.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "fibonacci-number",
+          "title": "斐波那契数",
+          "difficulty": 1
+        },
+        {
+          "platform": "lc",
+          "id": "powx-n",
+          "title": "快速幂",
+          "difficulty": 5
+        },
+        {
+          "platform": "lg",
+          "id": "P1044",
+          "title": "栈",
+          "difficulty": 3
+        }
+      ]
     },
     "scc": {
       "id": "scc",
@@ -1272,10 +1898,44 @@
       "keywords": [
         "线段树"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "divide_conquer",
+        "binary_tree",
+        "prefix_sum"
+      ],
+      "related": [
+        "fenwick",
+        "sweep_line",
+        "persistent_segtree",
+        "sqrt_decomposition"
+      ],
+      "article": "术/S3_区间操作的降维打击.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "range-sum-query-mutable",
+          "title": "区域和检索-数组可修改",
+          "difficulty": 5
+        },
+        {
+          "platform": "lg",
+          "id": "P3372",
+          "title": "【模板】线段树 1",
+          "difficulty": 5
+        },
+        {
+          "platform": "lg",
+          "id": "P3373",
+          "title": "【模板】线段树 2",
+          "difficulty": 6
+        },
+        {
+          "platform": "lg",
+          "id": "P1253",
+          "title": "扶苏的问题",
+          "difficulty": 5
+        }
+      ]
     },
     "shortest_path": {
       "id": "shortest_path",
@@ -1287,10 +1947,37 @@
       "keywords": [
         "最短路"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "graph",
+        "bfs",
+        "binary_heap"
+      ],
+      "related": [
+        "floyd",
+        "mst",
+        "topological_sort"
+      ],
+      "article": "法/F3_图论建模.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "network-delay-time",
+          "title": "网络延迟时间",
+          "difficulty": 5
+        },
+        {
+          "platform": "lg",
+          "id": "P3371",
+          "title": "【模板】单源最短路径（弱化版）",
+          "difficulty": 5
+        },
+        {
+          "platform": "lg",
+          "id": "P4779",
+          "title": "【模板】单源最短路径（标准版）",
+          "difficulty": 6
+        }
+      ]
     },
     "simulation": {
       "id": "simulation",
@@ -1317,10 +2004,35 @@
       "keywords": [
         "滑动窗口"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "two_pointers"
+      ],
+      "related": [
+        "monotonic_queue",
+        "hash_table",
+        "prefix_sum"
+      ],
+      "article": "术/S1_线性结构与树的极致压榨.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "longest-substring-without-repeating-characters",
+          "title": "无重复字符的最长子串",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "minimum-window-substring",
+          "title": "最小覆盖子串",
+          "difficulty": 7
+        },
+        {
+          "platform": "lc",
+          "id": "sliding-window-maximum",
+          "title": "滑动窗口最大值",
+          "difficulty": 7
+        }
+      ]
     },
     "sorting": {
       "id": "sorting",
@@ -1333,9 +2045,34 @@
         "排序"
       ],
       "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "related": [
+        "binary_search",
+        "two_pointers",
+        "merge_sort",
+        "quick_sort",
+        "greedy"
+      ],
+      "article": "法/F0_基础算法与构造.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "sort-an-array",
+          "title": "排序数组",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "merge-intervals",
+          "title": "合并区间",
+          "difficulty": 5
+        },
+        {
+          "platform": "lg",
+          "id": "P1177",
+          "title": "【模板】快速排序",
+          "difficulty": 3
+        }
+      ]
     },
     "sparse_table": {
       "id": "sparse_table",
@@ -1377,10 +2114,29 @@
       "keywords": [
         "栈"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "linked_list"
+      ],
+      "related": [
+        "queue",
+        "monotonic_stack",
+        "dfs"
+      ],
+      "article": "术/S1_线性结构与树的极致压榨.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "valid-parentheses",
+          "title": "有效的括号",
+          "difficulty": 1
+        },
+        {
+          "platform": "lc",
+          "id": "min-stack",
+          "title": "最小栈",
+          "difficulty": 5
+        }
+      ]
     },
     "state_machine": {
       "id": "state_machine",
@@ -1467,10 +2223,36 @@
       "keywords": [
         "拓扑排序"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "graph",
+        "dfs"
+      ],
+      "related": [
+        "dag",
+        "shortest_path",
+        "scc"
+      ],
+      "article": "法/F3_图论建模.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "course-schedule-ii",
+          "title": "课程表II",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "alien-dictionary",
+          "title": "火星词典",
+          "difficulty": 7
+        },
+        {
+          "platform": "lg",
+          "id": "P4017",
+          "title": "最大食物链计数",
+          "difficulty": 5
+        }
+      ]
     },
     "tree": {
       "id": "tree",
@@ -1482,10 +2264,37 @@
       "keywords": [
         "树"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "graph"
+      ],
+      "related": [
+        "binary_tree",
+        "lca",
+        "tree_dp",
+        "disjoint_set",
+        "trie"
+      ],
+      "article": "术/S1_线性结构与树的极致压榨.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "maximum-depth-of-binary-tree",
+          "title": "二叉树的最大深度",
+          "difficulty": 1
+        },
+        {
+          "platform": "lc",
+          "id": "diameter-of-binary-tree",
+          "title": "二叉树的直径",
+          "difficulty": 4
+        },
+        {
+          "platform": "lg",
+          "id": "P3884",
+          "title": "二叉树问题",
+          "difficulty": 3
+        }
+      ]
     },
     "tree_dp": {
       "id": "tree_dp",
@@ -1512,10 +2321,35 @@
       "keywords": [
         "字典树"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "tree"
+      ],
+      "related": [
+        "ac_automaton",
+        "kmp",
+        "hash_table"
+      ],
+      "article": "术/S5_字符串匹配的自动机.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "implement-trie-prefix-tree",
+          "title": "实现Trie(前缀树)",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "word-search-ii",
+          "title": "单词搜索II",
+          "difficulty": 7
+        },
+        {
+          "platform": "lg",
+          "id": "P8306",
+          "title": "【模板】字典树",
+          "difficulty": 3
+        }
+      ]
     },
     "two_pointers": {
       "id": "two_pointers",
@@ -1527,10 +2361,36 @@
       "keywords": [
         "双指针"
       ],
-      "prerequisites": [],
-      "related": [],
-      "article": {},
-      "problems": {}
+      "prerequisites": [
+        "sorting"
+      ],
+      "related": [
+        "sliding_window",
+        "binary_search",
+        "hash_table",
+        "kmp"
+      ],
+      "article": "术/S1_线性结构与树的极致压榨.md",
+      "problems": [
+        {
+          "platform": "lc",
+          "id": "container-with-most-water",
+          "title": "盛最多水的容器",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "3sum",
+          "title": "三数之和",
+          "difficulty": 5
+        },
+        {
+          "platform": "lc",
+          "id": "trapping-rain-water",
+          "title": "接雨水",
+          "difficulty": 7
+        }
+      ]
     },
     "two_sat": {
       "id": "two_sat",
