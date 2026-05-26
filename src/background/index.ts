@@ -5,6 +5,7 @@ import { syncToGithub } from '../lib/github';
 import { scheduleReview } from '../lib/sm2';
 import { checkAchievements } from '../lib/achievements';
 import { mapToUnifiedTopics } from '../lib/knowledge-graph';
+import { computeStreak } from '../lib/stats';
 
 console.log('[AlgoTracker] Background service worker 启动');
 
@@ -61,22 +62,26 @@ async function processSubmissionSave(submission: any, note?: string, mistakeTags
     await db.problems.update(problemId, update);
   }
 
-  // 2. 去重
+  // 2. 去重 — 事务内完成 check-then-insert 避免 TOCTOU 竞态
   const submissionId = submission.id || `${problemId}_${Date.now()}`;
-  const existingSub = await db.submissions.get(submissionId);
-  if (existingSub) {
-    console.log('[AlgoTracker] 主键去重拦截:', submissionId);
-    return;
-  }
-  const recentDup = await db.submissions
-    .where('problemId')
-    .equals(problemId)
-    .filter(s => s.verdict === verdict && s.timestamp > Date.now() - 120000)
-    .first();
-  if (recentDup) {
-    console.log('[AlgoTracker] 窗口去重拦截:', problemId, verdict);
-    return;
-  }
+  const inserted = await db.transaction('rw', db.submissions, async () => {
+    const existingSub = await db.submissions.get(submissionId);
+    if (existingSub) {
+      console.log('[AlgoTracker] 主键去重拦截:', submissionId);
+      return false;
+    }
+    const recentDup = await db.submissions
+      .where('problemId')
+      .equals(problemId)
+      .filter(s => s.verdict === verdict && s.timestamp > Date.now() - 120000)
+      .first();
+    if (recentDup) {
+      console.log('[AlgoTracker] 窗口去重拦截:', problemId, verdict);
+      return false;
+    }
+    return true;
+  });
+  if (!inserted) return;
 
   // 3. 保存提交记录
   let codeUrl = '';
@@ -147,24 +152,7 @@ async function processSubmissionSave(submission: any, note?: string, mistakeTags
       const allProfiles = await db.skillProfiles.toArray();
 
       // 计算当前连续天数
-      const daySet = new Set<string>();
-      for (const s of allSubs) {
-        daySet.add(new Date(s.timestamp).toISOString().slice(0, 10));
-      }
-      const sorted = [...daySet].sort().reverse();
-      let streak = 0;
-      if (sorted.length > 0) {
-        const today = new Date().toISOString().slice(0, 10);
-        const yest = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-        if (sorted[0] === today || sorted[0] === yest) {
-          streak = 1;
-          for (let i = 1; i < sorted.length; i++) {
-            const diff = (new Date(sorted[i - 1]).getTime() - new Date(sorted[i]).getTime()) / 86400000;
-            if (Math.abs(diff - 1) < 0.1) streak++;
-            else break;
-          }
-        }
-      }
+      const streak = computeStreak(allSubs);
 
       const newBadges = await checkAchievements(allSubs, allProbs, allProfiles, streak);
       for (const badge of newBadges) {

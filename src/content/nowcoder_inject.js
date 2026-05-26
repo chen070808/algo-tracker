@@ -206,7 +206,7 @@
 
       window.postMessage(
         {
-          type: 'ALGOTRACKER_NOWCODER_SUBMISSION',
+          type: 'ALGOTRACKER_SUBMISSION',
           data: {
             id: submissionId,
             status_display: verdict,
@@ -219,7 +219,7 @@
             tags: tags,
           },
         },
-        '*'
+        window.location.origin
       );
     } catch (e) {
       console.error('[AlgoTracker/牛客] detectAndDispatch 出错:', e);

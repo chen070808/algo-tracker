@@ -56,6 +56,15 @@ export async function syncToCloud(): Promise<SyncResult> {
     .limit(500)
     .toArray();
 
+  function platformFromProblemId(problemId: string): string {
+    const prefix = problemId.split('_')[0];
+    switch (prefix) {
+      case 'nowcoder': return 'nowcoder';
+      case 'luogu': return 'luogu';
+      default: return 'leetcode';
+    }
+  }
+
   const payload = {
     user_id: config.userId,
     skill_profiles: skillProfiles.map((sp) => ({
@@ -67,11 +76,11 @@ export async function syncToCloud(): Promise<SyncResult> {
       last_updated: sp.lastPracticedAt || 0,
     })),
     submissions: submissions.map((s) => ({
-      platform: (s as any).problemId?.startsWith('nowcoder') ? 'nowcoder' : 'leetcode',
+      platform: platformFromProblemId(s.problemId),
       problem_id: s.problemId,
-      problem_title: (s as any).title || '',
+      problem_title: '',
       verdict: s.verdict,
-      language: (s as any).language || '',
+      language: s.language || '',
       runtime: 0,
       memory: 0,
       timestamp: s.timestamp,

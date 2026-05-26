@@ -60,110 +60,121 @@ export const COMPETITIONS: CompetitionDef[] = [
 
 /**
  * 各比赛 × 各知识点的目标 Elo。
- * Key: competition id → { unifiedTopicId: targetElo }
+ * Key: unified KG node ID (e.g. 'binary_heap', 'dp')
  * 未列出的 topic 使用 competition.defaultTarget
  */
 export const COMPETITION_TARGETS: Record<string, Record<string, number>> = {
   lanqiao: {
-    'array': 1600, 'string': 1600, 'linked_list': 1500,
-    'stack': 1500, 'queue': 1500, 'hash_table': 1600,
-    'heap': 1400, 'tree': 1500, 'binary_tree': 1550,
-    'bst': 1400, 'trie': 1300, 'graph': 1400,
-    'sorting': 1600, 'binary_search': 1600, 'two_pointers': 1550,
-    'sliding_window': 1500, 'prefix_sum': 1550,
+    'linked_list': 1500, 'stack': 1500, 'queue': 1500,
+    'hash_table': 1600, 'binary_heap': 1400, 'tree': 1500,
+    'binary_tree': 1550, 'bst': 1400, 'trie': 1300,
+    'graph': 1400, 'sorting': 1600, 'binary_search': 1600,
+    'two_pointers': 1550, 'sliding_window': 1500,
+    'prefix_sum': 1550, 'difference_array': 1500,
     'bfs': 1500, 'dfs': 1550, 'backtracking': 1500,
-    'dp': 1600, 'knapsack': 1550, 'lcs': 1500,
+    'dp': 1600, 'knapsack': 1550,
     'greedy': 1600, 'divide_conquer': 1450,
-    'bit_manipulation': 1500, 'recursion': 1600,
-    'simulation': 1600, 'memoization': 1550,
+    'recursion': 1600, 'memoization': 1550,
     'number_theory': 1400, 'combinatorics': 1400, 'matrix': 1500,
     'monotonic_stack': 1400, 'monotonic_queue': 1400,
     'shortest_path': 1350, 'mst': 1300, 'topological_sort': 1400,
     'segment_tree': 1200, 'fenwick': 1200, 'disjoint_set': 1400,
     'interval_dp': 1350, 'tree_dp': 1300, 'bitmask_dp': 1200,
-    'geometry': 1200, 'quick_pow': 1400, 'probability': 1300,
+    'geometry': 1200, 'binary_lifting': 1400, 'probability': 1300,
     'state_machine': 1350, 'lca': 1200,
+    'kmp': 1350, 'modular_arith': 1400, 'scc': 1200,
   },
   noip: {
-    'array': 1800, 'string': 1850, 'linked_list': 1700,
-    'stack': 1750, 'queue': 1700, 'hash_table': 1800,
-    'heap': 1700, 'tree': 1800, 'binary_tree': 1800,
-    'bst': 1700, 'trie': 1650, 'graph': 1750,
-    'sorting': 1800, 'binary_search': 1850, 'two_pointers': 1800,
-    'sliding_window': 1750, 'prefix_sum': 1800,
+    'linked_list': 1700, 'stack': 1750, 'queue': 1700,
+    'hash_table': 1800, 'binary_heap': 1700, 'tree': 1800,
+    'binary_tree': 1800, 'bst': 1700, 'trie': 1650,
+    'graph': 1750, 'sorting': 1800, 'binary_search': 1850,
+    'two_pointers': 1800, 'sliding_window': 1750,
+    'prefix_sum': 1800, 'difference_array': 1750,
     'bfs': 1800, 'dfs': 1850, 'backtracking': 1800,
-    'dp': 1900, 'knapsack': 1850, 'lcs': 1850,
+    'dp': 1900, 'knapsack': 1850,
     'greedy': 1850, 'divide_conquer': 1800,
-    'bit_manipulation': 1800, 'recursion': 1800,
-    'simulation': 1800, 'memoization': 1850,
+    'recursion': 1800, 'memoization': 1850,
     'number_theory': 1800, 'combinatorics': 1800, 'matrix': 1750,
     'monotonic_stack': 1750, 'monotonic_queue': 1750,
     'shortest_path': 1750, 'mst': 1700, 'topological_sort': 1750,
     'segment_tree': 1700, 'fenwick': 1700, 'disjoint_set': 1750,
     'interval_dp': 1750, 'tree_dp': 1750, 'bitmask_dp': 1650,
-    'geometry': 1650, 'quick_pow': 1750, 'probability': 1700,
+    'geometry': 1650, 'binary_lifting': 1750, 'probability': 1700,
     'state_machine': 1700, 'lca': 1700,
+    'kmp': 1700, 'modular_arith': 1750, 'scc': 1700,
   },
   interview: {
-    'array': 1800, 'string': 1800, 'linked_list': 1750,
-    'stack': 1750, 'queue': 1700, 'hash_table': 1850,
-    'heap': 1700, 'tree': 1750, 'binary_tree': 1800,
-    'bst': 1600, 'trie': 1500, 'graph': 1650,
-    'sorting': 1700, 'binary_search': 1800, 'two_pointers': 1800,
-    'sliding_window': 1750, 'prefix_sum': 1750,
+    'linked_list': 1750, 'stack': 1750, 'queue': 1700,
+    'hash_table': 1850, 'binary_heap': 1700, 'tree': 1750,
+    'binary_tree': 1800, 'bst': 1600, 'trie': 1500,
+    'graph': 1650, 'sorting': 1700, 'binary_search': 1800,
+    'two_pointers': 1800, 'sliding_window': 1750,
+    'prefix_sum': 1750, 'difference_array': 1700,
     'bfs': 1750, 'dfs': 1800, 'backtracking': 1750,
-    'dp': 1700, 'knapsack': 1650, 'lcs': 1700,
+    'dp': 1700, 'knapsack': 1650,
     'greedy': 1700, 'divide_conquer': 1650,
-    'bit_manipulation': 1700, 'recursion': 1750,
-    'simulation': 1650, 'memoization': 1700,
+    'recursion': 1750, 'memoization': 1700,
     'number_theory': 1400, 'combinatorics': 1450, 'matrix': 1650,
     'monotonic_stack': 1600, 'monotonic_queue': 1550,
     'shortest_path': 1500, 'mst': 1400, 'topological_sort': 1500,
     'segment_tree': 1300, 'fenwick': 1250, 'disjoint_set': 1450,
     'interval_dp': 1400, 'tree_dp': 1350, 'bitmask_dp': 1200,
-    'geometry': 1200, 'quick_pow': 1400, 'probability': 1300,
+    'geometry': 1200, 'binary_lifting': 1400, 'probability': 1300,
     'state_machine': 1550, 'lca': 1200,
+    'kmp': 1400, 'modular_arith': 1400,
   },
   icpc: {
-    'array': 2100, 'string': 2150, 'linked_list': 2000,
-    'stack': 2000, 'queue': 2000, 'hash_table': 2100,
-    'heap': 2050, 'tree': 2100, 'binary_tree': 2050,
-    'bst': 2000, 'trie': 2000, 'graph': 2100,
-    'sorting': 2000, 'binary_search': 2100, 'two_pointers': 2050,
-    'sliding_window': 2050, 'prefix_sum': 2050,
+    'linked_list': 2000, 'stack': 2000, 'queue': 2000,
+    'hash_table': 2100, 'binary_heap': 2050, 'tree': 2100,
+    'binary_tree': 2050, 'bst': 2000, 'trie': 2000,
+    'graph': 2100, 'sorting': 2000, 'binary_search': 2100,
+    'two_pointers': 2050, 'sliding_window': 2050,
+    'prefix_sum': 2050, 'difference_array': 2000,
     'bfs': 2050, 'dfs': 2100, 'backtracking': 2100,
-    'dp': 2200, 'knapsack': 2100, 'lcs': 2150,
+    'dp': 2200, 'knapsack': 2100,
     'greedy': 2100, 'divide_conquer': 2100,
-    'bit_manipulation': 2050, 'recursion': 2000,
-    'simulation': 2000, 'memoization': 2100,
+    'recursion': 2000, 'memoization': 2100,
     'number_theory': 2100, 'combinatorics': 2150, 'matrix': 2000,
     'monotonic_stack': 2000, 'monotonic_queue': 2000,
     'shortest_path': 2100, 'mst': 2050, 'topological_sort': 2100,
     'segment_tree': 2100, 'fenwick': 2050, 'disjoint_set': 2050,
     'interval_dp': 2150, 'tree_dp': 2150, 'bitmask_dp': 2150,
-    'geometry': 2100, 'quick_pow': 2000, 'probability': 2050,
+    'geometry': 2100, 'binary_lifting': 2000, 'probability': 2050,
     'state_machine': 2000, 'lca': 2100,
+    'kmp': 2050, 'modular_arith': 2050, 'scc': 2100,
   },
   ioi: {
-    'array': 2200, 'string': 2250, 'linked_list': 2100,
-    'stack': 2100, 'queue': 2100, 'hash_table': 2200,
-    'heap': 2150, 'tree': 2250, 'binary_tree': 2200,
-    'bst': 2150, 'trie': 2150, 'graph': 2250,
-    'sorting': 2100, 'binary_search': 2200, 'two_pointers': 2150,
-    'sliding_window': 2150, 'prefix_sum': 2100,
+    'linked_list': 2100, 'stack': 2100, 'queue': 2100,
+    'hash_table': 2200, 'binary_heap': 2150, 'tree': 2250,
+    'binary_tree': 2200, 'bst': 2150, 'trie': 2150,
+    'graph': 2250, 'sorting': 2100, 'binary_search': 2200,
+    'two_pointers': 2150, 'sliding_window': 2150,
+    'prefix_sum': 2100, 'difference_array': 2100,
     'bfs': 2200, 'dfs': 2250, 'backtracking': 2250,
-    'dp': 2300, 'knapsack': 2250, 'lcs': 2300,
+    'dp': 2300, 'knapsack': 2250,
     'greedy': 2250, 'divide_conquer': 2250,
-    'bit_manipulation': 2200, 'recursion': 2100,
-    'simulation': 2100, 'memoization': 2200,
+    'recursion': 2100, 'memoization': 2200,
     'number_theory': 2300, 'combinatorics': 2300, 'matrix': 2100,
     'monotonic_stack': 2150, 'monotonic_queue': 2150,
     'shortest_path': 2250, 'mst': 2200, 'topological_sort': 2250,
     'segment_tree': 2300, 'fenwick': 2200, 'disjoint_set': 2200,
     'interval_dp': 2300, 'tree_dp': 2300, 'bitmask_dp': 2300,
-    'geometry': 2250, 'quick_pow': 2100, 'probability': 2200,
+    'geometry': 2250, 'binary_lifting': 2100, 'probability': 2200,
     'state_machine': 2150, 'lca': 2250,
+    'kmp': 2200, 'modular_arith': 2250, 'scc': 2250,
   },
+};
+
+/** Backward compat: old keys → KG node IDs */
+const KEY_ALIASES: Record<string, string> = {
+  'heap': 'binary_heap',
+  'quick_pow': 'binary_lifting',
+  'array': 'linked_list',       // closest KG node for generic array skills
+  'string': 'kmp',              // closest KG node for string skills
+  'lcs': 'dp',                  // LCS is a DP sub-problem
+  'bit_manipulation': 'number_bases',
+  'simulation': 'enumeration',
 };
 
 export function getCompetition(compId: string): CompetitionDef | undefined {
@@ -172,7 +183,12 @@ export function getCompetition(compId: string): CompetitionDef | undefined {
 
 export function getTargetElo(compId: string, topicId: string): number {
   const targets = COMPETITION_TARGETS[compId];
-  if (targets && topicId in targets) return targets[topicId];
+  if (targets) {
+    if (topicId in targets) return targets[topicId];
+    // Try backward-compat alias
+    const alias = KEY_ALIASES[topicId];
+    if (alias && alias in targets) return targets[alias];
+  }
   const comp = getCompetition(compId);
   return comp?.defaultTarget ?? 1500;
 }

@@ -84,11 +84,50 @@
     try {
       const m = window.monaco;
       if (!m || !m.editor) return '';
+
+      // Prefer getEditors() — we can check which editor is visible
+      const editors = m.editor.getEditors();
+      if (editors && editors.length > 0) {
+        // First pass: visible editor (user's code editor is always visible)
+        for (let i = 0; i < editors.length; i++) {
+          try {
+            const domNode = editors[i].getDomNode();
+            if (domNode && domNode.offsetParent !== null) {
+              const model = editors[i].getModel();
+              if (model) {
+                const v = model.getValue();
+                if (v && v.trim().length > 0) return v;
+              }
+            }
+          } catch (_) {}
+        }
+        // Second pass: longest code fallback (user code always longer than template)
+        let bestCode = '';
+        for (let j = 0; j < editors.length; j++) {
+          try {
+            const m2 = editors[j].getModel();
+            if (m2) {
+              const v2 = m2.getValue();
+              if (v2 && v2.trim().length > bestCode.length) {
+                bestCode = v2;
+              }
+            }
+          } catch (_) {}
+        }
+        if (bestCode) return bestCode;
+      }
+
+      // Fallback: getModels() — but prefer longest, not last
       const models = m.editor.getModels();
-      if (!models) return '';
-      for (let i = models.length - 1; i >= 0; i--) {
-        const v = models[i].getValue();
-        if (v && v.trim().length > 0) return v;
+      if (models) {
+        let bestModel = '';
+        for (let k = 0; k < models.length; k++) {
+          const v3 = models[k].getValue();
+          if (v3 && v3.trim().length > bestModel.length) {
+            bestModel = v3;
+          }
+        }
+        if (bestModel) return bestModel;
       }
     } catch (_) {}
     // Fallback: try CodeMirror (older LeetCode UI)
@@ -214,6 +253,17 @@
   // 5. Submission identity (slug + id)
   // ============================================================
 
+  // Code pre-capture: snapshot code when submit is clicked,
+  // so we have it even if the editor resets before the result arrives.
+  var _preCapturedCode = '';
+  var _preCapturedLang = '';
+
+  function captureCodeNow() {
+    _preCapturedCode = getMonacoCode();
+    _preCapturedLang = getCodeLanguage();
+    console.log('[AlgoTracker] 预捕获代码, length:', _preCapturedCode.length, ', lang:', _preCapturedLang);
+  }
+
   function getIdentity() {
     const m = window.location.pathname.match(/\/problems\/([^\/?#]+)(?:\/submissions\/(\d+))?/i);
     return {
@@ -260,6 +310,9 @@
   }
 
   function clearDedupCache(slug) {
+    // Also clear pre-captured code when problem context changes
+    _preCapturedCode = '';
+    _preCapturedLang = '';
     // 只清除当前题目的去重记录，不清其他题目的
     const prefix = slug ? DEDUP_STORAGE_PREFIX + slug + '::' : '';
     for (const k of Object.keys(processedKeys)) {
@@ -297,8 +350,8 @@
       markProcessed(slug, verdict);
       stopPolling();
 
-      const code = getMonacoCode();
-      const lang = getCodeLanguage();
+      const code = getMonacoCode() || _preCapturedCode;
+      const lang = getCodeLanguage() || _preCapturedLang;
       const { runtime, memory } = extractRuntimeMemory(resultEl);
       const difficulty = extractDifficulty();
       const tags = extractTags();
@@ -326,7 +379,7 @@
             tags: tags,
           },
         },
-        '*'
+        window.location.origin
       );
     } catch (e) {
       console.error('[AlgoTracker] detectAndDispatch 出错:', e);
@@ -425,6 +478,8 @@
         for (const el of candidates) {
           if (el && isSubmitButton(el)) {
             console.log('[AlgoTracker] 检测到 Submit 按钮点击');
+            // Capture code immediately before submission (safety net)
+            captureCodeNow();
             // Clear previous dedup cache so re-submission of same problem works
             clearDedupCache(getIdentity().slug);
             // Start polling (result will appear after judge queue)
@@ -446,6 +501,7 @@
     function (e) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         console.log('[AlgoTracker] 检测到键盘快捷键提交');
+        captureCodeNow();
         clearDedupCache(getIdentity().slug);
         startPolling();
       }

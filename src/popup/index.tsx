@@ -5,6 +5,7 @@ import { type BadgeDef } from '../lib/achievements';
 import { AchievementIcon } from '../components/AchievementIcon';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { getDailyRecommendations, type TagRecommendation } from '../lib/recommend';
+import { computeStreak } from '../lib/stats';
 import { getDueReviewCount } from '../lib/sm2';
 import { COMPETITIONS, getTargetElo, computeBandStats, eloProgressColor } from '../lib/elo';
 import { TOPIC_TAXONOMY } from '../lib/knowledge-graph';
@@ -243,7 +244,7 @@ function PopupApp() {
   const dailyStats = useMemo(() => {
     const map = new Map<string, { count: number; acCount: number }>();
     for (const s of allSubs) {
-      const ds = new Date(s.timestamp * 1000).toISOString().slice(0, 10);
+      const ds = new Date(s.timestamp).toISOString().slice(0, 10);
       const entry = map.get(ds) || { count: 0, acCount: 0 };
       entry.count++;
       if (s.verdict === 'AC') entry.acCount++;
@@ -278,21 +279,7 @@ function PopupApp() {
     const todayCount = allSubs.filter((s) => new Date(s.timestamp).toISOString().slice(0, 10) === today).length;
     const weekCount = allSubs.filter((s) => s.timestamp >= Date.now() - 7 * 86400000).length;
     const solved = new Set(allSubs.filter((s) => s.verdict === 'AC').map((s) => s.problemId)).size;
-    const daySet = new Set<string>();
-    for (const s of allSubs) daySet.add(new Date(s.timestamp).toISOString().slice(0, 10));
-    const sorted = [...daySet].sort().reverse();
-    let streak = 0;
-    if (sorted.length > 0) {
-      const todayStr = today;
-      const yestStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-      if (sorted[0] === todayStr || sorted[0] === yestStr) {
-        streak = 1;
-        for (let i = 1; i < sorted.length; i++) {
-          const diff = (new Date(sorted[i - 1]).getTime() - new Date(sorted[i]).getTime()) / 86400000;
-          if (Math.abs(diff - 1) < 0.1) streak++; else break;
-        }
-      }
-    }
+    const streak = computeStreak(allSubs);
     const efficiency = solved > 0 ? (ac / solved).toFixed(1) : '0';
     return { ac, total, rate: Math.round((ac / total) * 100), todayCount, weekCount, solved, streak, efficiency };
   }, [allSubs]);

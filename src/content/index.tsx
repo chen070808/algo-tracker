@@ -343,6 +343,7 @@ if (document.body) {
 window.addEventListener('message', (event) => {
   if (
     event.source !== window ||
+    event.origin !== window.location.origin ||
     !event.data
   ) {
     return;
