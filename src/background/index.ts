@@ -30,17 +30,25 @@ async function processSubmissionSave(submission: any, note?: string, mistakeTags
   else if (verdict === 'Compile Error') verdict = 'CE';
   else if (verdict === 'Runtime Error') verdict = 'RE';
   else if (verdict === 'Memory Limit Exceeded') verdict = 'MLE';
+  // LuoGu-specific: Unaccepted maps to WA
+  else if (verdict === 'Unaccepted') verdict = 'WA';
 
   // 1. 确保 Problem 记录存在
   const existingProb = await db.problems.get(problemId);
   if (!existingProb) {
+    let url: string;
+    if (plat === 'luogu') {
+      url = `https://www.luogu.com.cn/problem/${submission.titleSlug}`;
+    } else if (plat === 'nowcoder') {
+      url = `https://www.nowcoder.com/practice/${submission.titleSlug}`;
+    } else {
+      url = `https://leetcode.cn/problems/${submission.titleSlug}/`;
+    }
     await db.problems.put({
       id: problemId,
       platform: plat,
       title: submission.titleSlug,
-      url: plat === 'nowcoder'
-        ? `https://www.nowcoder.com/practice/${submission.titleSlug}`
-        : `https://leetcode.cn/problems/${submission.titleSlug}/`,
+      url,
       rating: problemRating,
       tags: tagSlugs,
       unifiedTopics,
@@ -71,11 +79,16 @@ async function processSubmissionSave(submission: any, note?: string, mistakeTags
   }
 
   // 3. 保存提交记录
-  const codeUrl = submission.id
-    ? (plat === 'nowcoder'
-        ? `https://www.nowcoder.com/practice/${submission.titleSlug}/submission/${submission.id}`
-        : `https://leetcode.cn/problems/${submission.titleSlug}/submissions/${submission.id}/`)
-    : '';
+  let codeUrl = '';
+  if (submission.id) {
+    if (plat === 'luogu') {
+      codeUrl = `https://www.luogu.com.cn/record/${submission.id}`;
+    } else if (plat === 'nowcoder') {
+      codeUrl = `https://www.nowcoder.com/practice/${submission.titleSlug}/submission/${submission.id}`;
+    } else {
+      codeUrl = `https://leetcode.cn/problems/${submission.titleSlug}/submissions/${submission.id}/`;
+    }
+  }
 
   await db.submissions.put({
     id: submissionId,

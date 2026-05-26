@@ -1,6 +1,6 @@
 import type { SkillProfile, Submission, Problem } from './db';
 import { getTargetElo } from './elo';
-import { getTopicNode, getLearningPath, getRelatedTopics, getTopicProblems, type TopicNode } from './knowledge-graph';
+import { getTopicNode, getLearningPath, getTopicProblems } from './knowledge-graph';
 
 export function calculateTagUrgency(
   acRate: number,

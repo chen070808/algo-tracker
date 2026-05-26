@@ -244,8 +244,154 @@ const NOWCODER_TAG_MAP: Record<string, string[]> = {
   '队列': ['queue', 'monotonic_queue'],
 };
 
+/**
+ * 洛谷 标签 → 统一主题映射
+ * 洛谷标签体系与牛客网类似但更细，部分标签含数字编号
+ */
+const LUOGU_TAG_MAP: Record<string, string[]> = {
+  '模拟': ['simulation'],
+  '枚举': ['enumeration'],
+  '排序': ['sorting', 'merge_sort', 'quick_sort'],
+  '二分': ['binary_search', 'divide_conquer'],
+  '二分答案': ['binary_search'],
+  '贪心': ['greedy'],
+  '构造': ['simulation'],
+  '高精度': ['simulation'],
+  '前缀和': ['prefix_sum', 'difference_array'],
+  '差分': ['difference_array'],
+  '递推': ['dp'],
+  '递归': ['recursion', 'divide_conquer'],
+  '分治': ['divide_conquer'],
+  '倍增': ['binary_lifting'],
+  '分块': ['sqrt_decomposition'],
+  '莫队': ['sqrt_decomposition'],
+  // 搜索
+  'BFS': ['bfs', 'bidirectional_bfs', 'flood_fill'],
+  'DFS': ['dfs', 'backtracking', 'flood_fill'],
+  '搜索': ['dfs', 'bfs', 'backtracking'],
+  '剪枝': ['backtracking', 'iterative_deepening'],
+  '双向搜索': ['bidirectional_bfs'],
+  '启发式搜索': ['heuristic_search'],
+  '迭代加深': ['iterative_deepening'],
+  '记忆化搜索': ['memoization', 'dp'],
+  // 动态规划
+  'DP': ['dp', 'memoization'],
+  '区间DP': ['interval_dp'],
+  '树形DP': ['tree_dp'],
+  '状压DP': ['bitmask_dp'],
+  '数位DP': ['dp'],
+  '背包': ['knapsack'],
+  '线性DP': ['dp'],
+  '概率DP': ['probability', 'dp'],
+  '期望DP': ['expected_value', 'dp'],
+  'DP优化': ['dp_optimization', 'binary_lifting'],
+  '单调队列优化': ['monotonic_queue', 'dp_optimization'],
+  '斜率优化': ['dp_optimization'],
+  '四边形不等式': ['dp_optimization'],
+  // 字符串
+  '字符串': ['kmp', 'trie', 'hash_table'],
+  '哈希': ['hash_table'],
+  'KMP': ['kmp'],
+  'Trie树': ['trie', 'ac_automaton'],
+  '字典树': ['trie', 'ac_automaton'],
+  'AC自动机': ['ac_automaton'],
+  '后缀数组': ['suffix_array', 'suffix_automaton'],
+  '后缀自动机': ['suffix_automaton'],
+  'Manacher': ['kmp'],
+  'Z函数': ['kmp'],
+  // 数据结构
+  '数据结构': ['linked_list', 'stack', 'queue'],
+  '栈': ['stack', 'monotonic_stack'],
+  '单调栈': ['monotonic_stack'],
+  '队列': ['queue', 'monotonic_queue'],
+  '单调队列': ['monotonic_queue'],
+  '链表': ['linked_list'],
+  '堆': ['binary_heap'],
+  '优先队列': ['binary_heap'],
+  '并查集': ['disjoint_set'],
+  '树状数组': ['fenwick'],
+  '线段树': ['segment_tree', 'fenwick'],
+  '平衡树': ['balanced_tree', 'bst'],
+  'ST表': ['sparse_table'],
+  '树链剖分': ['heavy_light_decomp'],
+  'LCT': ['lct'],
+  '可持久化': ['persistent_segtree'],
+  '可持久化线段树': ['persistent_segtree'],
+  '可持久化并查集': ['persistent_segtree', 'disjoint_set'],
+  '珂朵莉树': ['balanced_tree'],
+  // 图论
+  '图论': ['graph', 'dag', 'bipartite_graph'],
+  '树': ['tree', 'binary_tree'],
+  '二叉树': ['binary_tree'],
+  'LCA': ['lca'],
+  '拓扑排序': ['topological_sort', 'dag'],
+  '最短路': ['shortest_path', 'floyd'],
+  '最小生成树': ['mst', 'disjoint_set'],
+  '差分约束': ['shortest_path'],
+  '连通性': ['scc', 'dfs'],
+  '强连通分量': ['scc'],
+  '双连通分量': ['graph', 'dfs'],
+  '二分图': ['bipartite_graph', 'hungarian'],
+  '网络流': ['network_flow', 'hungarian'],
+  '费用流': ['network_flow'],
+  '2-SAT': ['two_sat'],
+  '欧拉回路': ['graph', 'dfs'],
+  '哈密顿回路': ['graph', 'bitmask_dp'],
+  '树的重心': ['tree', 'dfs'],
+  '树的直径': ['tree', 'dfs'],
+  // 数学
+  '数学': ['number_theory', 'combinatorics'],
+  '数论': ['number_theory', 'divisibility', 'gcd', 'prime_sieve', 'modular_arith', 'congruence'],
+  '组合数学': ['combinatorics', 'permutation', 'combination'],
+  '排列组合': ['permutation', 'combination'],
+  '容斥': ['inclusion_exclusion'],
+  '概率': ['probability', 'expected_value'],
+  '期望': ['expected_value'],
+  '矩阵': ['matrix', 'gaussian'],
+  '线性代数': ['gaussian'],
+  '高斯消元': ['gaussian'],
+  '博弈论': ['nim'],
+  '快速幂': ['binary_lifting'],
+  '逆元': ['modular_inverse'],
+  '素数': ['prime_sieve', 'divisibility'],
+  '筛法': ['prime_sieve'],
+  '欧拉函数': ['euler_theorem'],
+  '欧拉定理': ['euler_theorem'],
+  '费马小定理': ['fermat_little'],
+  '中国剩余定理': ['crt'],
+  '莫比乌斯反演': ['mobius'],
+  'FFT': ['fft'],
+  'NTT': ['fft'],
+  '生成函数': ['generating_function'],
+  '卡特兰数': ['catalan'],
+  '斯特林数': ['stirling'],
+  // 计算几何
+  '计算几何': ['geometry'],
+  '凸包': ['convex_hull'],
+  // 其他
+  '位运算': ['divisibility', 'number_bases'],
+  '双指针': ['two_pointers'],
+  '滑动窗口': ['sliding_window'],
+  '扫描线': ['sweep_line', 'segment_tree'],
+  '离散化': ['discretization'],
+  '离线': ['discretization'],
+  '随机化': ['probability'],
+  '打表': ['enumeration'],
+  'O2优化': [],
+};
+
 export function mapToUnifiedTopics(platform: string, rawTags: string[]): string[] {
-  const tagMap = platform === 'nowcoder' ? NOWCODER_TAG_MAP : LEETCODE_TAG_MAP;
+  let tagMap: Record<string, string[]>;
+  switch (platform) {
+    case 'nowcoder':
+      tagMap = NOWCODER_TAG_MAP;
+      break;
+    case 'luogu':
+      tagMap = LUOGU_TAG_MAP;
+      break;
+    default:
+      tagMap = LEETCODE_TAG_MAP;
+  }
   const unified = new Set<string>();
   for (const raw of rawTags) {
     const mapped = tagMap[raw] || tagMap[raw.toLowerCase()];

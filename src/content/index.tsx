@@ -7,18 +7,40 @@ import '../popup/index.css';
 console.log('[AlgoTracker] Content script loaded at:', window.location.href);
 
 // ── 注入 MAIN world 检测脚本 ──
-// 通过 <script> 标签注入，使得脚本能访问页面的 Monaco 编辑器、
-// MutationObserver、History API 等，从而用 DOM 方式检测提交结果
+// 通过 <script> 标签注入，使得脚本能访问页面的 Monaco/CodeMirror 编辑器、
+// MutationObserver、History API 等，从而用 DOM + API 方式检测提交结果
+
+function detectPlatform(): 'leetcode' | 'nowcoder' | 'luogu' | null {
+  const host = window.location.host;
+  if (host.includes('leetcode')) return 'leetcode';
+  if (host.includes('nowcoder')) return 'nowcoder';
+  if (host.includes('luogu.com.cn')) return 'luogu';
+  return null;
+}
+
+function getInjectScript(): string {
+  switch (detectPlatform()) {
+    case 'nowcoder':
+      return 'src/content/nowcoder_inject.js';
+    case 'luogu':
+      return 'src/content/luogu_inject.js';
+    default:
+      return 'src/content/inject.js';
+  }
+}
+
 function injectInterceptor() {
+  const platform = detectPlatform();
+  console.log('[AlgoTracker] 检测到平台:', platform);
   if (document.getElementById('algo-tracker-interceptor')) return;
   const script = document.createElement('script');
   script.id = 'algo-tracker-interceptor';
-  script.src = chrome.runtime.getURL('src/content/inject.js');
+  script.src = chrome.runtime.getURL(getInjectScript());
   script.onload = function () {
-    console.log('[AlgoTracker] MAIN world 检测脚本注入完成');
+    console.log('[AlgoTracker] MAIN world 检测脚本注入完成:', platform);
   };
   script.onerror = function () {
-    console.error('[AlgoTracker] MAIN world 检测脚本注入失败！');
+    console.error('[AlgoTracker] MAIN world 检测脚本注入失败！', platform);
   };
   (document.head || document.documentElement).appendChild(script);
 }
@@ -99,7 +121,8 @@ function Drawer({
 
   const handleSave = () => {
     if (submission) {
-      sendToBackground('SAVE_SUBMISSION', { submission, note, mistakeTags });
+      const plat = detectPlatform() || 'leetcode-cn';
+      sendToBackground('SAVE_SUBMISSION', { submission, note, mistakeTags, platform: plat });
     }
     setSaved(true);
   };
@@ -268,19 +291,6 @@ function renderDrawer(forceOpen = false) {
   );
 }
 
-function saveViaBackground() {
-  if (!currentSubmission) return;
-  const dedupKey = `${currentSubmission.titleSlug}::${currentSubmission.status_display}`;
-  if (dedupKey === lastAutoSavedKey) {
-    console.log('[AlgoTracker] 跳过重复自动保存:', dedupKey);
-    return;
-  }
-  lastAutoSavedKey = dedupKey;
-  sendToBackground('AUTO_SAVE_SUBMISSION', { submission: currentSubmission })
-    .then(() => { /* 静默成功 */ })
-    .catch(() => { /* context 失效，刷新页面即可恢复 */ });
-}
-
 // ── UI 初始化 ──
 
 function initUI() {
@@ -333,15 +343,41 @@ if (document.body) {
 window.addEventListener('message', (event) => {
   if (
     event.source !== window ||
-    !event.data ||
-    event.data.type !== 'ALGOTRACKER_SUBMISSION'
+    !event.data
   ) {
     return;
   }
 
-  console.log('[AlgoTracker] 收到提交数据:', event.data.data);
-  currentSubmission = event.data.data;
+  if (event.data.type === 'ALGOTRACKER_SUBMISSION') {
+    handleLeetCodeSubmission(event.data.data);
+  } else if (event.data.type === 'ALGOTRACKER_SUBMISSION_LUOGU') {
+    handleLuoGuSubmission(event.data.data);
+  }
+});
 
+function handleLeetCodeSubmission(data: any) {
+  console.log('[AlgoTracker] 收到 LeetCode/Nowcoder 提交数据:', data);
+  currentSubmission = data;
+  persistAndMaybeShow(data, 'leetcode');
+}
+
+function handleLuoGuSubmission(data: any) {
+  console.log('[AlgoTracker] 收到 LuoGu 提交数据:', data);
+  currentSubmission = {
+    id: data.id,
+    status_display: data.status_display,
+    lang: data.lang,
+    runtime: data.runtime,
+    memory: data.memory,
+    titleSlug: data.titleSlug,
+    difficulty: data.difficulty || 0,
+    tags: data.tags || [],
+    code: data.code || '',
+  };
+  persistAndMaybeShow(data, 'luogu');
+}
+
+function persistAndMaybeShow(data: any, platform: string) {
   // 持久化到 sessionStorage，应对 SPA 路由跳转
   sessionStorage.setItem(
     'algoTracker_pendingSubmission',
@@ -349,10 +385,24 @@ window.addEventListener('message', (event) => {
   );
 
   // 始终自动保存提交记录到 IndexedDB
-  saveViaBackground();
+  saveViaBackground(platform);
 
   // AC 静默保存，不弹窗；非 AC 弹出复盘抽屉
   if (currentSubmission.status_display !== 'Accepted') {
     renderDrawer(true);
   }
-});
+}
+
+function saveViaBackground(platform?: string) {
+  if (!currentSubmission) return;
+  const dedupKey = `${currentSubmission.titleSlug}::${currentSubmission.status_display}`;
+  if (dedupKey === lastAutoSavedKey) {
+    console.log('[AlgoTracker] 跳过重复自动保存:', dedupKey);
+    return;
+  }
+  lastAutoSavedKey = dedupKey;
+  const plat = platform || 'leetcode-cn';
+  sendToBackground('AUTO_SAVE_SUBMISSION', { submission: currentSubmission, platform: plat })
+    .then(() => { /* 静默成功 */ })
+    .catch(() => { /* context 失效，刷新页面即可恢复 */ });
+}

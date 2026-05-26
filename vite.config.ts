@@ -24,6 +24,8 @@ const manifest = defineManifest({
         '*://www.nowcoder.com/practice/*',
         '*://www.nowcoder.com/question/*',
         '*://ac.nowcoder.com/acm/problem/*',
+        '*://www.luogu.com.cn/problem/*',
+        '*://www.luogu.com.cn/record/*',
       ],
       js: ['src/content/index.tsx'],
       run_at: 'document_start'
@@ -31,12 +33,13 @@ const manifest = defineManifest({
   ],
   web_accessible_resources: [
     {
-      resources: ['src/content/inject.js', 'src/content/nowcoder_inject.js'],
+      resources: ['src/content/inject.js', 'src/content/nowcoder_inject.js', 'src/content/luogu_inject.js'],
       matches: [
         '*://leetcode.cn/*',
         '*://leetcode.com/*',
         '*://www.nowcoder.com/*',
         '*://ac.nowcoder.com/*',
+        '*://www.luogu.com.cn/*',
       ]
     }
   ],
@@ -46,6 +49,7 @@ const manifest = defineManifest({
     '*://leetcode.com/*',
     '*://www.nowcoder.com/*',
     '*://ac.nowcoder.com/*',
+    '*://www.luogu.com.cn/*',
     '*://api.github.com/*',
   ],
 });
