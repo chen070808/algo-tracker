@@ -71,8 +71,9 @@ function buildSkillMap(
 }
 
 /**
- * 多因子推荐引擎 v4 — 前置依赖感知
- * 核心改进：如果前置知识未掌握，降低紧急度，引导先学前置
+ * 每日推荐 V1 — 规则优先，可解释优先。
+ * score = 14 天没练 + Elo 显著低于目标 + 前置知识已满足。
+ * 先让用户相信“为什么推荐”，再逐步加入更复杂的模型。
  */
 export function getDailyRecommendations(
   skillProfiles: SkillProfile[],
@@ -130,44 +131,40 @@ export function getDailyRecommendations(
       ? problems.slice(0, 3)
       : [];
 
-    // 因子1: Elo 差距分
-    const gapScore = eloGap > 0 ? Math.min(eloGap / 400, 1) : 0;
-    // 因子2: 遗忘分
-    const forgettingScore = Math.min(daysSince / 14, 1);
-    // 因子3: 置信度
-    const confidence = Math.min(sp.totalAttempted / 20, 1);
+    let score = 0;
+    const reasonParts: string[] = [];
 
-    // 基础紧急度
-    let urgency = confidence > 0
-      ? (0.5 * gapScore + 0.35 * forgettingScore + 0.15 * (1 - confidence)) * confidence
-      : 0;
-
-    // 前置依赖调整：未掌握的前置越多，紧急度越低
-    // （因为现在学这个主题效率不高，应该先学前置）
-    if (prerequisites.length > 0) {
-      const readiness = masteredCount / prerequisites.length;
-      // 如果前置全未掌握，大幅降低（但不清零，保留少量信号）
-      urgency *= 0.2 + 0.8 * readiness;
+    if (daysSince >= 14) {
+      score += 3;
+      reasonParts.push('14 天未练');
+    } else if (daysSince >= 7) {
+      score += 2;
+      reasonParts.push(`${daysSince} 天未练`);
     }
 
-    // 诊断原因 — 前置依赖感知
-    let reason: string;
-    if (!prereqsReady && eloGap > 0) {
+    if (eloGap > 100) {
+      score += 2;
+      reasonParts.push(`距目标差 ${eloGap} 分`);
+    } else if (eloGap > 0) {
+      score += 1;
+      reasonParts.push(`距目标差 ${eloGap} 分`);
+    }
+
+    if (prereqsReady) {
+      score += 1;
+      if (prerequisites.length > 0) reasonParts.push('前置已满足');
+    } else {
       const missing = prerequisites.filter((p) => !p.mastered);
       const missingNames = missing.slice(0, 2).map((p) => p.label).join('、');
       const extra = missing.length > 2 ? `等${missing.length}项` : '';
-      reason = `前置${missingNames}${extra}未掌握，建议先巩固`;
-    } else if (eloGap <= 0) {
-      reason = '已达标，保持手感';
-    } else if (eloGap > 200) {
-      reason = `前置已备，距目标差${eloGap}分，可以系统训练`;
-    } else if (daysSince > 7) {
-      reason = `${daysSince}天未练，建议复习巩固`;
-    } else if (eloGap > 100) {
-      reason = `接近目标，差${eloGap}分`;
-    } else {
-      reason = `即将达标，差${eloGap}分`;
+      reasonParts.push(`先补前置：${missingNames}${extra}`);
     }
+
+    // 少量提交的主题仍可出现，但降低排序，避免一次偶然 WA 主导推荐。
+    if (sp.totalAttempted < 3) score -= 1;
+
+    const urgency = score;
+    const reason = reasonParts.length > 0 ? reasonParts.join('，') : '保持手感';
 
     recs.push({
       tag: sp.tag,
@@ -175,7 +172,7 @@ export function getDailyRecommendations(
       currentElo,
       targetElo,
       eloGap,
-      urgency: Math.round(urgency * 100) / 100,
+      urgency,
       reason,
       suggestedDifficulty: difficultyForElo(currentElo),
       acRate,
@@ -189,7 +186,7 @@ export function getDailyRecommendations(
 
   return recs
     .filter((r) => r.totalAttempted >= 1)
-    .sort((a, b) => b.urgency - a.urgency)
+    .sort((a, b) => b.urgency - a.urgency || b.eloGap - a.eloGap)
     .slice(0, 5);
 }
 
