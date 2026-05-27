@@ -8,7 +8,33 @@
 (function () {
   if (window.__algoTrackerLuoguInjected) return;
   window.__algoTrackerLuoguInjected = true;
-  console.log('[AlgoTracker] LuoGu MAIN world 检测引擎启动');
+  var DEBUG = localStorage.getItem('algoTrackerDebug') === '1';
+  function log() {
+    if (!DEBUG) return;
+    console.log.apply(console, ['[AlgoTracker][Luogu]'].concat([].slice.call(arguments)));
+  }
+  function warn() {
+    if (!DEBUG) return;
+    console.warn.apply(console, ['[AlgoTracker][Luogu]'].concat([].slice.call(arguments)));
+  }
+  function normalizeUrl(input) {
+    try {
+      return new URL(String(input), window.location.href);
+    } catch (_) {
+      return null;
+    }
+  }
+  function isRecordContentOnlyUrl(input) {
+    var parsed = normalizeUrl(input);
+    return !!(parsed && RECORD_URL_RE.test(parsed.href) && parsed.search.indexOf('_contentOnly') !== -1);
+  }
+  function isProblemUrl(input) {
+    var parsed = normalizeUrl(input);
+    return !!(parsed && PROBLEM_URL_RE.test(parsed.href));
+  }
+  function getCurrentProblemId() {
+    return extractProblemIdFromRecordPage() || extractProblemId() || sessionStorage.getItem('algoTracker_luogu_pendingPid') || '';
+  }
 
   var RECORD_URL_RE = /^https:\/\/www\.luogu\.com\.cn\/record\/(\d+)/;
   var PROBLEM_URL_RE = /^https:\/\/www\.luogu\.com\.cn\/problem\/(\w+)/;
@@ -85,18 +111,58 @@
   // ============================================================
 
   var recordData = null;
+  var unknownTimeout = null;
+  var finalSent = false;
+
+  function markFinalSent() {
+    finalSent = true;
+    if (unknownTimeout) {
+      clearTimeout(unknownTimeout);
+      unknownTimeout = null;
+    }
+  }
+
+  function startUnknownFallbackTimer() {
+    if (unknownTimeout || finalSent) return;
+    unknownTimeout = setTimeout(function () {
+      if (finalSent) return;
+      var problemId = getCurrentProblemId();
+      if (!problemId) {
+        warn('30 秒兜底触发，但未能解析题号');
+        return;
+      }
+      var cached = getCachedSubmission(problemId);
+      var submission = {
+        id: extractRecordId() || '',
+        status_display: 'Unknown',
+        lang: detectLanguage() || '',
+        runtime: '',
+        memory: '',
+        titleSlug: problemId,
+        difficulty: mapLuoguDifficulty(null),
+        tags: [],
+        code: (cached && cached.code) || '',
+      };
+      log('30 秒未获取到最终结果，发送 Unknown 兜底提交', submission);
+      markFinalSent();
+      window.postMessage(
+        { type: 'ALGOTRACKER_SUBMISSION_LUOGU', data: submission },
+        window.location.origin
+      );
+    }, 30000);
+  }
 
   // Intercept fetch for _contentOnly=1 requests
   var origFetch = window.fetch;
   window.fetch = function () {
     var args = arguments;
     var url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url) || '';
-    if (RECORD_URL_RE.test(url) && url.indexOf('_contentOnly') !== -1) {
+    if (isRecordContentOnlyUrl(url)) {
       return origFetch.apply(this, args).then(function (resp) {
         var clone = resp.clone();
         clone.json().then(function (json) {
           recordData = json;
-          console.log('[AlgoTracker] 拦截到 LuoGu record API 响应');
+          log('拦截到 record API 响应');
           processRecordData(json);
         }).catch(function () { /* not JSON */ });
         return resp;
@@ -111,12 +177,12 @@
     var method = arguments[0];
     var url = typeof arguments[1] === 'string' ? arguments[1] : arguments[1].toString();
     var rest = Array.prototype.slice.call(arguments, 2);
-    if (RECORD_URL_RE.test(url) && url.indexOf('_contentOnly') !== -1) {
+    if (isRecordContentOnlyUrl(url)) {
       this.addEventListener('load', function () {
         try {
           var json = JSON.parse(this.responseText);
           recordData = json;
-          console.log('[AlgoTracker] 拦截到 LuoGu record XHR 响应');
+          log('拦截到 record XHR 响应');
           processRecordData(json);
         } catch (_) { /* not JSON */ }
       });
@@ -130,6 +196,7 @@
 
     var verdict = normalizeLuoguVerdict(record.status);
     if (!verdict) return;
+    markFinalSent();
 
     var runtime = record.time !== undefined ? record.time + 'ms' : '';
     var memory = record.memory !== undefined ? (record.memory / 1024).toFixed(0) + 'MB' : '';
@@ -165,14 +232,14 @@
     var dedupKey = 'luogu_' + problemId + '_' + verdict + '_' + record.id;
     var recent = sessionStorage.getItem('algoTracker_luogu_lastSent');
     if (recent === dedupKey) {
-      console.log('[AlgoTracker] LuoGu 去重拦截:', dedupKey);
+      log('去重拦截:', dedupKey);
       return;
     }
     sessionStorage.setItem('algoTracker_luogu_lastSent', dedupKey);
     sessionStorage.removeItem('algoTracker_luogu_pendingCode');
     sessionStorage.removeItem('algoTracker_luogu_pendingPid');
 
-    console.log('[AlgoTracker] LuoGu 提交数据:', submission);
+    log('提交数据:', submission);
     window.postMessage(
       { type: 'ALGOTRACKER_SUBMISSION_LUOGU', data: submission },
       window.location.origin
@@ -188,11 +255,13 @@
   function startDomPolling() {
     if (domPollTimer) return;
     var lastStatus = '';
+    startUnknownFallbackTimer();
     domPollTimer = setInterval(function () {
       var info = parseRecordPageDOM();
       if (info && info.status !== lastStatus) {
         lastStatus = info.status;
         if (!isPendingStatus(info.status)) {
+          markFinalSent();
           var problemId = extractProblemIdFromRecordPage();
           var cached = getCachedSubmission(problemId);
           var submission = {
@@ -211,6 +280,8 @@
           if (recent !== dedupKey) {
             sessionStorage.setItem('algoTracker_luogu_lastSent', dedupKey);
             sessionStorage.removeItem('algoTracker_luogu_pendingCode');
+            sessionStorage.removeItem('algoTracker_luogu_pendingPid');
+            sessionStorage.removeItem('algoTracker_luogu_pendingTime');
             window.postMessage(
               { type: 'ALGOTRACKER_SUBMISSION_LUOGU', data: submission },
               window.location.origin
@@ -288,16 +359,40 @@
   function normalizeLuoguVerdict(raw) {
     var s = String(raw).trim();
     // LuoGu API returns numeric status codes
-    var statusMap = { 0: '', 1: '', 2: '', 12: 'Accepted', 14: 'Unaccepted' };
+    var statusMap = {
+      0: '',
+      1: '',
+      2: '',
+      3: '',
+      4: '',
+      5: '',
+      6: 'Wrong Answer',
+      7: 'Runtime Error',
+      8: 'Time Limit Exceeded',
+      9: 'Memory Limit Exceeded',
+      10: 'Output Limit Exceeded',
+      11: 'Compile Error',
+      12: 'Accepted',
+      13: 'Wrong Answer',
+      14: 'Wrong Answer',
+      15: 'Wrong Answer',
+      16: 'Runtime Error',
+      17: 'Runtime Error',
+      18: 'Runtime Error',
+      19: 'Runtime Error',
+      20: 'Runtime Error',
+      21: 'Wrong Answer',
+    };
     var num = Number(raw);
-    if (!isNaN(num) && statusMap[num]) return statusMap[num];
+    if (!isNaN(num) && Object.prototype.hasOwnProperty.call(statusMap, num)) return statusMap[num];
 
-    if (/^(Accepted|AC)$/i.test(s)) return 'Accepted';
-    if (/^(Unaccepted|Wrong Answer|WA)$/i.test(s)) return 'Wrong Answer';
-    if (/^(Compile Error|CE)$/i.test(s)) return 'Compile Error';
-    if (/^(Time Limit Exceeded|TLE)$/i.test(s)) return 'Time Limit Exceeded';
-    if (/^(Runtime Error|RE)$/i.test(s)) return 'Runtime Error';
-    if (/^(Memory Limit Exceeded|MLE)$/i.test(s)) return 'Memory Limit Exceeded';
+    if (/^(Accepted|AC|通过)$/i.test(s)) return 'Accepted';
+    if (/^(Unaccepted|Wrong Answer|WA|答案错误|未通过)$/i.test(s)) return 'Wrong Answer';
+    if (/^(Compile Error|CE|编译错误)$/i.test(s)) return 'Compile Error';
+    if (/^(Time Limit Exceeded|TLE|时间超限)$/i.test(s)) return 'Time Limit Exceeded';
+    if (/^(Runtime Error|RE|运行错误)$/i.test(s)) return 'Runtime Error';
+    if (/^(Memory Limit Exceeded|MLE|内存超限)$/i.test(s)) return 'Memory Limit Exceeded';
+    if (/^(Output Limit Exceeded|OLE|输出超限)$/i.test(s)) return 'Output Limit Exceeded';
 
     if (/^(Judging|Waiting|Compiling|Running|Queueing)$/i.test(s)) return '';
     if (s === '0' || s === '1' || s === '2') return '';
@@ -321,7 +416,7 @@
     sessionStorage.setItem('algoTracker_luogu_pendingCode', code);
     sessionStorage.setItem('algoTracker_luogu_pendingPid', problemId);
     sessionStorage.setItem('algoTracker_luogu_pendingTime', String(Date.now()));
-    console.log('[AlgoTracker] LuoGu 代码已缓存:', problemId, code.length, 'chars');
+    log('代码已缓存:', problemId, code.length, 'chars');
   }
 
   function getCachedSubmission(problemId) {
@@ -361,6 +456,7 @@
       var problemId = extractProblemId();
       if (code && problemId) {
         cacheCode(code, problemId);
+        log('已缓存编辑器代码:', problemId, code.length, 'chars');
       }
     };
 
@@ -402,10 +498,10 @@
     var url = window.location.href;
 
     if (RECORD_URL_RE.test(url)) {
-      console.log('[AlgoTracker] LuoGu 记录页检测模式');
+      log('记录页检测模式');
       startDomPolling();
     } else if (PROBLEM_URL_RE.test(url)) {
-      console.log('[AlgoTracker] LuoGu 题目页检测模式');
+      log('题目页检测模式');
       setupSubmitListener();
     }
   }
