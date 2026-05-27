@@ -11,8 +11,10 @@ console.log('[AlgoTracker] Background service worker 启动');
 
 async function processSubmissionSave(submission: any, note?: string, mistakeTags?: string[], platform?: string) {
   const plat = platform || 'leetcode-cn';
-  const problemId = `${plat}_${submission.titleSlug}`;
+  const platformProblemId = String(submission.titleSlug || submission.problemId || 'unknown');
+  const problemId = `${plat}_${platformProblemId}`;
   const problemRating = submission.difficulty || 1500;
+  const submissionTimestamp = Number(submission.timestamp || Date.now());
   const rawTags: { slug: string; name: string }[] = submission.tags?.length
     ? submission.tags
     : [];
@@ -39,16 +41,16 @@ async function processSubmissionSave(submission: any, note?: string, mistakeTags
   if (!existingProb) {
     let url: string;
     if (plat === 'luogu') {
-      url = `https://www.luogu.com.cn/problem/${submission.titleSlug}`;
+      url = `https://www.luogu.com.cn/problem/${platformProblemId}`;
     } else if (plat === 'nowcoder') {
-      url = `https://www.nowcoder.com/practice/${submission.titleSlug}`;
+      url = `https://www.nowcoder.com/practice/${platformProblemId}`;
     } else {
-      url = `https://leetcode.cn/problems/${submission.titleSlug}/`;
+      url = `https://leetcode.cn/problems/${platformProblemId}/`;
     }
     await db.problems.put({
       id: problemId,
       platform: plat,
-      title: submission.titleSlug,
+      title: platformProblemId,
       url,
       rating: problemRating,
       tags: tagSlugs,
@@ -63,11 +65,19 @@ async function processSubmissionSave(submission: any, note?: string, mistakeTags
   }
 
   // 2. 去重 — 事务内完成 check-then-insert 避免 TOCTOU 竞态
-  const submissionId = submission.id || `${problemId}_${Date.now()}`;
+  const submissionId = submission.id || `${problemId}_${submissionTimestamp}`;
   const inserted = await db.transaction('rw', db.submissions, async () => {
     const existingSub = await db.submissions.get(submissionId);
     if (existingSub) {
       console.log('[AlgoTracker] 主键去重拦截:', submissionId);
+      return false;
+    }
+    const sameMomentDup = await db.submissions
+      .where('[platform+platformProblemId+timestamp]')
+      .equals([plat, platformProblemId, submissionTimestamp])
+      .first();
+    if (sameMomentDup) {
+      console.log('[AlgoTracker] 复合键去重拦截:', plat, platformProblemId, submissionTimestamp);
       return false;
     }
     const recentDup = await db.submissions
@@ -89,16 +99,18 @@ async function processSubmissionSave(submission: any, note?: string, mistakeTags
     if (plat === 'luogu') {
       codeUrl = `https://www.luogu.com.cn/record/${submission.id}`;
     } else if (plat === 'nowcoder') {
-      codeUrl = `https://www.nowcoder.com/practice/${submission.titleSlug}/submission/${submission.id}`;
+      codeUrl = `https://www.nowcoder.com/practice/${platformProblemId}/submission/${submission.id}`;
     } else {
-      codeUrl = `https://leetcode.cn/problems/${submission.titleSlug}/submissions/${submission.id}/`;
+      codeUrl = `https://leetcode.cn/problems/${platformProblemId}/submissions/${submission.id}/`;
     }
   }
 
   await db.submissions.put({
     id: submissionId,
     problemId,
-    timestamp: Date.now(),
+    platform: plat,
+    platformProblemId,
+    timestamp: submissionTimestamp,
     verdict,
     language: submission.lang || '',
     runtimeStr: submission.runtime || '',
@@ -168,14 +180,14 @@ async function processSubmissionSave(submission: any, note?: string, mistakeTags
     try {
       const lang = submission.lang || '';
       const uploaded = await syncToGithub(
-        submission.titleSlug,
+        platformProblemId,
         submission.code,
         mdContent,
         lang,
         verdict
       );
       if (uploaded) {
-        console.log('[AlgoTracker] GitHub 同步成功:', submission.titleSlug);
+        console.log('[AlgoTracker] GitHub 同步成功:', platformProblemId);
       } else {
         console.log('[AlgoTracker] GitHub 同步未执行（未配置或不满足条件）');
       }

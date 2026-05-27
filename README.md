@@ -1,73 +1,48 @@
-# React + TypeScript + Vite
+# OI Life Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+OI Life Tracker 是一个面向算法学习者的 Chrome 扩展：自动记录你的刷题提交，把 LeetCode、洛谷、牛客上的练习转成 Elo、热力图、知识点弱项和下一步建议。
 
-Currently, two official plugins are available:
+![Popup](docs/popup.png)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 支持平台
 
-## React Compiler
+| 平台 | 检测状态 | 当前能力 |
+| --- | --- | --- |
+| LeetCode CN | 可用 | 题目页提交检测、代码保存、标签映射 |
+| LeetCode | 可用 | 题目页提交检测、代码保存、标签映射 |
+| 牛客 | 可用 | DOM 检测、提交记录保存、标签映射 |
+| 洛谷 | 测试中 | 题目页/记录页检测、GraphQL/API fallback |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 安装方式
 
-## Expanding the ESLint configuration
+Chrome 商店链接：待上架。
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+开发者模式安装：
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+然后打开 `chrome://extensions`，启用“开发者模式”，点击“加载已解压的扩展程序”，选择 `algo-tracker/dist`。
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 核心功能
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- 自动追踪：在支持平台提交后自动保存题目、结果、语言、代码和时间。
+- Elo 评分：按全局和知识点分别计算能力值，持续观察提升。
+- 知识图谱：把平台标签映射到统一的算法知识节点，定位真实弱项。
+- 热力图：用 7 天和全年视图记录训练节奏，避免只看题量。
+
+## 隐私承诺
+
+- 默认数据只保存在本地浏览器 IndexedDB。
+- 不会自动上传你的代码、提交记录或个人数据。
+- 云同步和 GitHub 同步都需要你主动配置并触发。
+- 导出 JSON 和清空数据都在本地完成。
+
+## 项目文档
+
+- 产品与路线：[`../OI_Life/`](../OI_Life/)
+- 知识图谱：[`../shared/knowledge-graph.json`](../shared/knowledge-graph.json)
+- RAG 内容工具：[`../rag_system/`](../rag_system/)
+

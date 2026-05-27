@@ -13,6 +13,8 @@ export interface Problem {
 export interface Submission {
   id: string;
   problemId: string;
+  platform?: string;
+  platformProblemId?: string;
   timestamp: number;
   verdict: 'AC' | 'WA' | 'TLE' | 'RE' | 'CE' | 'MLE' | string;
   language: string;
@@ -76,6 +78,14 @@ export class AlgoTrackerDB extends Dexie {
     this.version(2).stores({
       problems: 'id, platform, rating, *tags, *unifiedTopics',
       submissions: 'id, problemId, timestamp, verdict',
+      skillProfiles: 'tag, rating, lastPracticedAt, masteryLevel',
+      notes: 'problemId, lastUpdatedAt',
+      reviews: 'problemId, nextReviewAt, stage',
+      achievements: 'id, unlockedAt',
+    });
+    this.version(3).stores({
+      problems: 'id, platform, rating, *tags, *unifiedTopics',
+      submissions: 'id, problemId, timestamp, verdict, platform, platformProblemId, [platform+platformProblemId+timestamp]',
       skillProfiles: 'tag, rating, lastPracticedAt, masteryLevel',
       notes: 'problemId, lastUpdatedAt',
       reviews: 'problemId, nextReviewAt, stage',

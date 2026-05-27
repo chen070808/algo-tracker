@@ -1,7 +1,7 @@
 /// <reference types="chrome"/>
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { CheckCircle2, XCircle, X, Edit3, BookOpen, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, XCircle, X, Edit3 } from 'lucide-react';
 import '../popup/index.css';
 
 console.log('[AlgoTracker] Content script loaded at:', window.location.href);
@@ -378,7 +378,8 @@ function handleLuoGuSubmission(data: any) {
   persistAndMaybeShow(data, 'luogu');
 }
 
-function persistAndMaybeShow(data: any, platform: string) {
+function persistAndMaybeShow(_data: any, platform: string) {
+  if (!currentSubmission) return;
   // 持久化到 sessionStorage，应对 SPA 路由跳转
   sessionStorage.setItem(
     'algoTracker_pendingSubmission',

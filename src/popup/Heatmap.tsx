@@ -97,3 +97,38 @@ export default function Heatmap({ dailyStats, year = new Date().getFullYear() }:
     </svg>
   );
 }
+
+export function MiniHeatmap({ dailyStats, days = 7 }: { dailyStats: DailyCount[]; days?: number }) {
+  const countMap = useMemo(() => {
+    const m = new Map<string, DailyCount>();
+    for (const d of dailyStats) m.set(d.date, d);
+    return m;
+  }, [dailyStats]);
+
+  const cells = Array.from({ length: days }, (_, i) => {
+    const date = new Date(Date.now() - (days - 1 - i) * 86400000);
+    const key = date.toISOString().slice(0, 10);
+    const stat = countMap.get(key);
+    return {
+      date: key,
+      count: stat?.count || 0,
+      acCount: stat?.acCount || 0,
+      label: date.toLocaleDateString('zh-CN', { weekday: 'short' }),
+    };
+  });
+
+  return (
+    <div className="grid grid-cols-7 gap-1.5">
+      {cells.map((c) => (
+        <div key={c.date} className="flex flex-col items-center gap-1">
+          <div
+            className="h-8 w-full rounded-md border border-[var(--color-border-muted)]"
+            style={{ backgroundColor: getColor(c.count) }}
+            title={`${c.date}: ${c.count} 次提交，${c.acCount} 次 AC`}
+          />
+          <span className="text-[9px] text-[var(--color-text-muted)]">{c.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
